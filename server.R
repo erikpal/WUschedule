@@ -1,7 +1,5 @@
 library(shiny)
 library(shinythemes)
-#library(ggplot2)
-#library(profvis)
 source("00-Functions.R")
 
 ##Load the data
