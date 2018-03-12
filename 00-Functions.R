@@ -1,0 +1,154 @@
+##This function can be used to update the schedule data from an informer
+##live excel file.  To update, set update to true, otherwise it will load the
+##last retreived data set.
+
+loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
+      if (update == TRUE) {
+            source("../Informer/00-Functions-OpenIQY.R")
+            x <- openIqy("../Informer/Queries/Schedule Frame.iqy")
+            
+            #Clean up used variables
+            x <- x[!is.na(x$`Course Number`), ]
+            
+            x$SECLOC <- as.character(x$SECLOC)
+            x$COMBINELOC <- as.character(x$COMBINELOC)
+            x$BUILDINGDESC <- as.character(x$BUILDINGDESC)
+            x$DEPT <- as.character(x$`Department Code`)
+            x$COURSECODE <- as.character(x$`Course Number`)
+            x$SECNO <- as.character(x$`Section Number Code`)
+            x$IMDESC <- as.character(x$`IM Description`)
+            
+            x$TERM <- as.character(x$`Term Code`)
+            x$YEAR <- as.integer(as.character(x$`Calendar Year - Section`))
+            
+            x$SUBJECT <- gsub("(\\D{3,4}) (\\d{4})", "\\1", x$COURSECODE)
+            x$COURSENO <- gsub("(\\D{3,4}) (\\d{4})", "\\2", x$COURSECODE)
+            
+            ##Concatenate the titles
+            x$COTITLE <- paste(x$COTITLE1, x$COTITLE2, x$COTITLE3)
+            
+            
+            ##Remove any courses that do not have any of the required variables
+            x <- x[!x$SECLOC == "",]
+            x <- x[!x$TERM == "",]
+            ##NOTE: Year is coming from the original query, so it is excluded
+
+            ##Make a column to index online classes
+            x$ONLINE <- grepl("Online", x$IMDESC)
+            
+            ##Recode BUILDINGDESC to say Online
+            x$BUILDINGDESC[x$ONLINE] <- "Online"
+            
+            #Remove unused variables
+            #x$`Section  Location` <- NULL
+            x$`Department Code` <- NULL
+            x$`Course Number` <- NULL
+            x$`Term Code` <- NULL
+            x$`Calendar Year - Section` <- NULL
+            x$`IM Description` <- NULL
+            x$`Section Number Code` <- NULL
+            
+            ##Experimenting with buttons in the table
+            x$VIEW <- ""
+            
+            ##Add GCP Details
+            gcp_codes <- c("CRI" = "Critical Thinking",
+                           "ETH" = "Ethical Reasoning",
+                           "INTC" = "Intercultural Competence",
+                           "OCOM" = "Oral Communication",
+                           "WCOM" = "Written Communication",
+                           "SSHB" = "Social Systems & Human Behaviors",
+                           "ROC" = "Roots of Cultures",
+                           "GLBL" = "Global Understaning",
+                           "ARTS" = "Arts Appreciation",
+                           "PNW" = "Physical & Natural World",
+                           "QL" = "Quantitative Literacy")
+            
+            ##Set the fields characters
+            x$genedcatc <- as.character(x$genedcatc)
+            x$interstuda <- as.character(x$interstuda)
+            x$interstudb <- as.character(x$interstudb)
+            
+            ##Make new boolean variables for the skills
+            x$CRI <- x$interstuda == "CRI" | x$interstudb == "CRI"
+            x$ETH <- x$interstuda == "ETH" | x$interstudb == "ETH"
+            x$INTC <- x$interstuda == "INTC" | x$interstudb == "INTC"
+            x$OCOM <- x$interstuda == "OCOM" | x$interstudb == "OCOM"
+            x$WCOM <- x$interstuda == "WCOM" | x$interstudb == "WCOM"
+            
+            ##Make new boolean variables for the knowledge areas
+            x$SSHB <- x$genedcatc == "SSHB"
+            x$ROC <- x$genedcatc == "ROC"
+            x$GLBL <- x$genedcatc == "GLBL"
+            x$ARTS <- x$genedcatc == "ARTS"
+            x$PNW <- x$genedcatc == "PNW"
+            x$QL <- x$genedcatc == "QL"
+            
+            #Save
+            saveRDS(x, path)
+      }
+      
+      x <- readRDS(path)
+      return(x)
+}
+
+defaultTerms <- function() {
+      default_terms <- list()
+      
+      default_terms$SU <- ifelse(
+            as.integer(format(Sys.Date(), "%j")) >= 
+                  as.integer(format(as.Date("2017-02-28"), "%j")) - 14 &&
+                  as.integer(format(Sys.Date(), "%j")) <
+                  as.integer(format(as.Date("2017-06-16"), "%j")),
+            TRUE, FALSE)
+      
+      default_terms$FA <- ifelse(
+            as.integer(format(Sys.Date(), "%j")) >= 
+                  as.integer(format(as.Date("2017-04-03"), "%j")) - 14 &&
+            as.integer(format(Sys.Date(), "%j")) <
+                  as.integer(format(as.Date("2017-09-08"), "%j")),
+            TRUE, FALSE)
+      
+      default_terms$F1 <- default_terms$FA
+      
+      default_terms$F2 <- ifelse(
+            as.integer(format(Sys.Date(), "%j")) >= 
+                  as.integer(format(as.Date("2017-04-03"), "%j")) - 14 &&
+                  as.integer(format(Sys.Date(), "%j")) <
+                  as.integer(format(as.Date("2017-11-10"), "%j")),
+            TRUE, FALSE)
+      
+      default_terms$SP <- ifelse(
+            as.integer(format(Sys.Date(), "%j")) >= 
+                  as.integer(format(as.Date("2017-11-06"), "%j")) - 14 &&
+            as.integer(format(Sys.Date(), "%j")) < 366 ||
+            as.integer(format(Sys.Date(), "%j")) + 366 <
+                  as.integer(format(as.Date("2018-01-26"), "%j")) + 366,
+            TRUE, FALSE)
+      
+      default_terms$S1 <- default_terms$SP
+      
+      default_terms$S2 <- ifelse(
+            as.integer(format(Sys.Date(), "%j")) >= 
+                  as.integer(format(as.Date("2017-11-06"), "%j")) - 14 &&
+                  as.integer(format(Sys.Date(), "%j")) < 366 ||
+                  as.integer(format(Sys.Date(), "%j")) + 366 <
+                  as.integer(format(as.Date("2018-03-30"), "%j")) + 366,
+            TRUE, FALSE)
+      
+      return(default_terms)
+}
+
+defaultYear <- function() {
+      
+      default_terms <- defaultTerms()
+      
+      if(as.integer(format(Sys.Date(), "%m")) >= 11 &&
+         default_terms$SP == TRUE) {
+            year <- as.integer(format(Sys.Date(), "%Y")) + 1
+      } else {
+            year <- as.integer(format(Sys.Date(), "%Y")) 
+      }
+      return(year)
+}
+
