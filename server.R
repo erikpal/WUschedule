@@ -50,23 +50,24 @@ shinyServer(function(input, output) {
       
       output$mainbody <- renderUI({
             fluidPage(
-                  theme = shinytheme("yeti"),
-                  #shinythemes::themeSelector(),##Enable theme selector widget
+                  theme = "mystyle.css",
                   
-                  title = "Schedule Search",
+                  title = "Course Schedule Search",
+                  br(), br(), br(), br(), br(), 
+                  br(), br(), br(), br(), 
+                  tags$h2(HTML("<center>Course Schedule Search</center>")),
+                  br(),
                   
-                  tags$h1(HTML("Schedule Search")),
-
                   fluidRow(
                         column(6,
                                wellPanel(
-                                     h4("When?"),
-                                     checkboxGroupInput("year", "Year:",
+                                     h3("When?"),
+                                     checkboxGroupInput("year", h5("Year:"),
                                                         choices = choices_year,
                                                         selected = defaultYear(),
                                                         inline = TRUE
                                      ),
-                                     selectInput("term", "Term:",
+                                     selectInput("term", h5("Term:"),
                                                  choices = c("Spring Semester" = "SP",
                                                              "Spring Term 1" = "S1",
                                                              "Spring Term 2" = "S2",
@@ -82,34 +83,34 @@ shinyServer(function(input, output) {
                         ),
 
                         column(2,
-                               h4("Where?"),
-                               selectInput("campus", "Campus:", 
+                               h3("Where?"),
+                               selectInput("campus", h5("Campus:"), 
                                            choices = choices_campus,
                                            multiple = TRUE, 
                                            selectize = TRUE
                                ),
-                               checkboxInput("online", label = "Include Online Classes"),
-                               checkboxInput("nearby", label = "Include Nearby Campuses")
+                               checkboxInput("online", label = h5("Include Online Classes")),
+                               checkboxInput("nearby", label = h5("Include Nearby Campuses"))
                                
                         ),
                         column(2,
-                               h4("What?"),
-                               selectInput("department", "Department:", 
+                               h3("What?"),
+                               selectInput("department", h5("Department:"), 
                                            choices = choices_department,
                                            multiple = TRUE, 
                                            selectize = TRUE),
-                               selectInput("gcpskills", "GCP Skill Area:", 
+                               selectInput("gcpskills", h5("GCP Skill Area:"), 
                                            choices = unname(gcp_skills),
                                            multiple = TRUE, 
                                            selectize = TRUE),
-                               selectInput("gcpknowledge", "GCP Knowledge Area:", 
+                               selectInput("gcpknowledge", h5("GCP Knowledge Area:"), 
                                            choices = unname(gcp_knowledge),
                                            multiple = TRUE, 
                                            selectize = TRUE)
                                ),
                         column(2,
-                               actionButton("Add_to_planner", label = "Add to planner"),
-                               actionButton("Remove_from_planner", label = "Remove from planner")
+                               actionButton("Add_to_planner", label = h5("Add to planner")),
+                               actionButton("Remove_from_planner", label = h5("Remove from planner"))
                                
                                )
                   ),
