@@ -44,12 +44,14 @@ cols <- c("Select" = "SELECT",
           "Meeting Type" = "IMDESC",
           "Instructor Email" = "wuEMAL"
           )
-shinyServer(function(input, output) {
+
+shinyServer(function(input, output, session) {
       vals <- reactiveValues()
       vals$Data <- data
       
       output$mainbody <- renderUI({
             fluidPage(
+                  ## Custom Webster branded theme
                   theme = "mystyle.css",
                   
                   title = "Course Schedule Search",
@@ -58,88 +60,87 @@ shinyServer(function(input, output) {
                   tags$h2(HTML("<center>Course Schedule Search</center>")),
                   br(),
                   
-                  fluidRow(
-                        column(6,
-                               wellPanel(
-                                     h3("When?"),
-                                     checkboxGroupInput("year", h5("Year:"),
-                                                        choices = choices_year,
-                                                        selected = defaultYear(),
-                                                        inline = TRUE
-                                     ),
-                                     selectInput("term", h5("Term:"),
-                                                 choices = c("Spring Semester" = "SP",
-                                                             "Spring Term 1" = "S1",
-                                                             "Spring Term 2" = "S2",
-                                                             "Summer Session" = "SU",
-                                                             "Fall Semester" = "FA",
-                                                             "Fall Term 1" = "F1",
-                                                             "Fall Term 2" = "F2"),
-                                                 selected = default_terms,
-                                                 multiple = TRUE, 
-                                                 selectize = TRUE
+                  sidebarLayout(
+                          sidebarPanel(
+                                  h3("When?"),
+                                  checkboxGroupInput("year", h5("Year:"),
+                                                     choices = choices_year,
+                                                     selected = defaultYear(),
+                                                     inline = TRUE,
+                                                     selectInput("term", h5("Term:"),
+                                                                 choices = c("Spring Semester" = "SP",
+                                                                             "Spring Term 1" = "S1",
+                                                                             "Spring Term 2" = "S2",
+                                                                             "Summer Session" = "SU",
+                                                                             "Fall Semester" = "FA",
+                                                                             "Fall Term 1" = "F1",
+                                                                             "Fall Term 2" = "F2"),
+                                                                 selected = default_terms,
+                                                                 multiple = TRUE,
+                                                                 selectize = TRUE
+                                                                )
+                                                    ),
+                                  hr(), br(),
+                                  h3("Where?"),
+                                  selectInput(inputId = "campus", 
+                                              label = h5("Campus:"), 
+                                              choices = choices_campus,
+                                              multiple = TRUE, 
+                                              selectize = TRUE),
+                                  checkboxInput("online", label = h5("Include Online Classes")),
+                                  checkboxInput("nearby", label = h5("Include Nearby Campuses")),
+                                  hr(), br(),      
+                                  h3("What?"),
+                                  validateCssUnit("inherit"),
+                                  selectInput(inputId = "department", 
+                                              label = h5("Department:"),
+                                              choices = choices_department,
+                                              multiple = TRUE,
+                                              selectize = TRUE),
+                                  selectInput(inputId = "gcpskills", 
+                                              label = h5("GCP Skill Area:"), 
+                                              choices = unname(gcp_skills),
+                                              multiple = TRUE,
+                                              selectize = TRUE),
+                                  selectInput(inputId = "gcpknowledge", 
+                                              label = h5("GCP Knowledge Area:"), 
+                                              choices = unname(gcp_knowledge),
+                                              multiple = TRUE,
+                                              selectize = TRUE),
+                                  hr(), br(),              
+                                  actionButton("Add_to_planner", label = h5("Add to planner")),
+                                  actionButton("Remove_from_planner", label = h5("Remove from planner")),
+                                  br(), br(),
+                                  img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo")
+                                  )
+                        ),
+                
+                  
+                  mainPanel(
+                          tabsetPanel(type = "tabs", 
+                                      tabPanel("Full Schedule", class = "one",
+                                               DT::dataTableOutput("maintable")
+                                               ),
+                                      tabPanel("My Planner", class = "one",
+                                               DT::dataTableOutput("plannertable")
+                                               )
                                      )
-                               )
-                        ),
-
-                        column(2,
-                               h3("Where?"),
-                               selectInput("campus", h5("Campus:"), 
-                                           choices = choices_campus,
-                                           multiple = TRUE, 
-                                           selectize = TRUE
-                               ),
-                               checkboxInput("online", label = h5("Include Online Classes")),
-                               checkboxInput("nearby", label = h5("Include Nearby Campuses"))
-                               
-                        ),
-                        column(2,
-                               h3("What?"),
-                               selectInput("department", h5("Department:"), 
-                                           choices = choices_department,
-                                           multiple = TRUE, 
-                                           selectize = TRUE),
-                               selectInput("gcpskills", h5("GCP Skill Area:"), 
-                                           choices = unname(gcp_skills),
-                                           multiple = TRUE, 
-                                           selectize = TRUE),
-                               selectInput("gcpknowledge", h5("GCP Knowledge Area:"), 
-                                           choices = unname(gcp_knowledge),
-                                           multiple = TRUE, 
-                                           selectize = TRUE)
-                               ),
-                        column(2,
-                               actionButton("Add_to_planner", label = h5("Add to planner")),
-                               actionButton("Remove_from_planner", label = h5("Remove from planner"))
-                               
-                               )
-                  ),
-                  
-                  tabsetPanel(type = "tabs",
-                              tabPanel("Full Schedule",
-                                       #actionButton("Add_to_planner", label = "Add to planner"),
-                                       #actionButton("Remove_from_planner", label = "Remove from planner"),
-                                       DT::dataTableOutput("maintable")
-                              ),
-                                     
-                              tabPanel("My Planner",DT::dataTableOutput("plannertable"))
-
-                  ),
-                  
-                  tags$script(HTML(
-                        '$(document).on("click", "input", function () {
-                              var checkboxes = document.getElementsByName("row_selected");
-                              var checkboxesChecked = [];
-                              for (var i=0; i<checkboxes.length; i++) {
-                        
-                                    if (checkboxes[i].checked) {
-                                          checkboxesChecked.push(checkboxes[i].value);
-                                    }
-                              }
-                              Shiny.onInputChange("checked_rows", checkboxesChecked);
-                        })'
-                  ))
+                           )
             )
+                  
+                  # tags$script(HTML(
+                  #       '$(document).on("click", "input", function () {
+                  #             var checkboxes = document.getElementsByName("row_selected");
+                  #             var checkboxesChecked = [];
+                  #             for (var i=0; i<checkboxes.length; i++) {
+                  # 
+                  #                   if (checkboxes[i].checked) {
+                  #                         checkboxesChecked.push(checkboxes[i].value);
+                  #                   }
+                  #             }
+                  #             Shiny.onInputChange("checked_rows", checkboxesChecked);
+                  #       })'
+                  # ))
       })
 
       output$maintable <- DT::renderDataTable({
