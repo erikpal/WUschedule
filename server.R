@@ -1,5 +1,7 @@
 library(shiny)
 library(shinythemes)
+library(shinyBS)
+library(bsplus)
 source("00-Functions.R")
 
 ##Load the data
@@ -51,13 +53,27 @@ shinyServer(function(input, output, session) {
       
       output$mainbody <- renderUI({
             fluidPage(
+                  tags$script(HTML(
+                          '$(document).on("click", "input", function () {
+                          var checkboxes = document.getElementsByName("row_selected");
+                          var checkboxesChecked = [];
+                          for (var i=0; i<checkboxes.length; i++) {
+                          
+                          if (checkboxes[i].checked) {
+                          checkboxesChecked.push(checkboxes[i].value);
+                          }
+                          }
+                          Shiny.onInputChange("checked_rows", checkboxesChecked);
+                        })'
+                  )),
+                 
                   ## Custom Webster branded theme
                   theme = "mystyle.css",
                   
-                  title = "Course Schedule Search",
+                  title = "Course Schedules",
                   br(), br(), br(), br(), br(), 
                   br(), br(), br(), br(), 
-                  tags$h2(HTML("<center>Course Schedule Search</center>")),
+                  tags$h2(HTML("<center>Course Schedules</center>")),
                   br(),
                   
                   sidebarLayout(
@@ -80,7 +96,7 @@ shinyServer(function(input, output, session) {
                                               multiple = TRUE,
                                               selectize = TRUE
                                               ),
-                                  hr(), br(),
+                                  hr(),
                                   h3("Where?"),
                                   selectInput(inputId = "campus", 
                                               label = h5("Campus:"), 
@@ -89,10 +105,26 @@ shinyServer(function(input, output, session) {
                                               selectize = TRUE
                                               ),
                                   checkboxInput("online", label = h5("Include Online Classes")),
-                                  checkboxInput("nearby", label = h5("Include Nearby Campuses")),
-                                  hr(), br(),      
+                                  tags$button(type = "button", class = "btn btn-primary", "?") %>%
+                                          bs_embed_popover(
+                                                  title = "More information",
+                                                  content = "Online courses are held through WorldClassroom and do not meet in person."
+                                          ),
+                                  use_bs_popover(),
+                                  
+                                  # bsPopover(id = "online", title = "What is an Online Course?",
+                                  #           content = "Online courses are held through WorldClassroom
+                                  #                       and do not meet in person.",
+                                  #           placement = "right", 
+                                  #           trigger = "focus"
+                                  #           ),
+                                  checkboxInput("nearby", label = h5("Include Nearby Campuses", 
+                                                                bsButton("nearby", label = " ", icon = icon("question"), 
+                                                                style = "info", size = "extra-small")
+                                                                )
+                                                ),
+                                  hr(),     
                                   h3("What?"),
-                                  validateCssUnit("inherit"),
                                   selectInput(inputId = "department", 
                                               label = h5("Department:"),
                                               choices = choices_department,
@@ -114,8 +146,8 @@ shinyServer(function(input, output, session) {
                                   hr(), br(),              
                                   actionButton("Add_to_planner", label = h5("Add to planner")),
                                   actionButton("Remove_from_planner", label = h5("Remove from planner")),
-                                  br(), br(),
-                                  img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo")
+                                  br(), br()
+                                  #img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo", width = "auto", height = "auto")
                         ),
                   
                   mainPanel(
@@ -129,22 +161,8 @@ shinyServer(function(input, output, session) {
                                      )
                            )
                   )
-            )
-                  
-                  # tags$script(HTML(
-                  #       '$(document).on("click", "input", function () {
-                  #             var checkboxes = document.getElementsByName("row_selected");
-                  #             var checkboxesChecked = [];
-                  #             for (var i=0; i<checkboxes.length; i++) {
-                  # 
-                  #                   if (checkboxes[i].checked) {
-                  #                         checkboxesChecked.push(checkboxes[i].value);
-                  #                   }
-                  #             }
-                  #             Shiny.onInputChange("checked_rows", checkboxesChecked);
-                  #       })'
-                  # ))
-      })
+        )
+})
 
       output$maintable <- DT::renderDataTable({
             DT <- vals$Data
