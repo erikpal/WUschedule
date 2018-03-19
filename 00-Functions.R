@@ -5,7 +5,16 @@
 loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
       if (update == TRUE) {
             source("../Informer/00-Functions-OpenIQY.R")
-            x <- openIqy("../Informer/Queries/Schedule Frame.iqy")
+            
+            days.offset <- 14
+            cap.offset <- 365 * 2
+            load.date <- as.character(format(Sys.Date() - days.offset, "%m/%d/%Y"))
+            cap.date <- as.character(format(Sys.Date() + cap.offset, "%m/%d/%Y"))
+            
+            qparams <- list("parameter_0" = load.date, 
+                            "parameter_1" = cap.date) 
+
+            x <- openIqy("../Informer/Queries/Schedule Frame.iqy", qparams)
             
             #Clean up used variables
             x <- x[!is.na(x$`Course Number`), ]

@@ -2,6 +2,7 @@ library(shiny)
 library(shinythemes)
 library(shinyBS)
 library(bsplus)
+library(DT)
 source("00-Functions.R")
 
 ##Load the data
@@ -247,11 +248,23 @@ shinyServer(function(input, output, session) {
                   DT <- DT[DT$GCPKNOWLEDGE, ]
             }
             
-            DT <- DT[, cols]##Trim to include one the colums we want in the DT
-            colnames(DT) <- names(cols)
 
-            DT::datatable(DT, escape = FALSE, select = "none",
-                         options = list(sDom  = '<"top">lfrt<"bottom">ip'))
+            DT::datatable(DT, escape = FALSE, 
+                          rownames = FALSE,
+                          select = "none",
+                          colnames = cols,
+                          extensions = c('ColReorder', 'Responsive'),
+                          options = list(sDom  = '<"top">lfrt<"bottom">ip',
+                                         colReorder = list(realtime = FALSE))
+                          ) %>% formatStyle(columns = "stat", 
+                                            target = "row", 
+                                            backgroundColor = styleEqual(c("C", "X"), 
+                                                                         c("yellow", "red")
+                                                                         )
+                                            )
+            
+            #DT <- DT[, cols]##Trim to include one the colums we want in the DT
+            #colnames(DT) <- names(cols)
       })
       
       output$plannertable <- DT::renderDataTable({
