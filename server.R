@@ -79,13 +79,13 @@ shinyServer(function(input, output, session) {
                   
                   sidebarLayout(
                           sidebarPanel(
-                                  h3("When?"),
-                                  checkboxGroupInput("year", h5("Year:"),
+                                  h2("Search by: "), br(), br(),
+                                  checkboxGroupInput("year", "Year",
                                                      choices = choices_year,
                                                      selected = defaultYear(),
                                                      inline = TRUE
-                                                     ),
-                                  selectInput("term", h5("Term:"),
+                                                ),
+                                  selectInput("term", "Session",
                                               choices = c("Spring Semester" = "SP",
                                                           "Spring Term 1" = "S1",
                                                           "Spring Term 2" = "S2",
@@ -96,60 +96,87 @@ shinyServer(function(input, output, session) {
                                               selected = default_terms,
                                               multiple = TRUE,
                                               selectize = TRUE
-                                              ),
-                                  hr(),
-                                  h3("Where?"),
+                                                ),
                                   selectInput(inputId = "campus", 
-                                              label = h5("Campus:"), 
+                                              label = "Campus",
                                               choices = choices_campus,
                                               multiple = TRUE, 
                                               selectize = TRUE
-                                              ),
-                                  checkboxInput("online", label = h5("Include Online Classes")),
-                                  tags$button(type = "button", class = "btn btn-primary", "?") %>%
-                                          bs_embed_popover(
-                                                  title = "More information",
-                                                  content = "Online courses are held through WorldClassroom and do not meet in person."
-                                          ),
-                                  use_bs_popover(),
-                                  
-                                  # bsPopover(id = "online", title = "What is an Online Course?",
-                                  #           content = "Online courses are held through WorldClassroom
-                                  #                       and do not meet in person.",
-                                  #           placement = "right", 
-                                  #           trigger = "focus"
-                                  #           ),
-                                  checkboxInput("nearby", label = h5("Include Nearby Campuses", 
-                                                                bsButton("nearby", label = " ", icon = icon("question"), 
-                                                                style = "info", size = "extra-small")
-                                                                )
                                                 ),
-                                  hr(),     
-                                  h3("What?"),
-                                  selectInput(inputId = "department", 
-                                              label = h5("Department:"),
-                                              choices = choices_department,
-                                              multiple = TRUE,
-                                              selectize = TRUE
-                                              ),
-                                  selectInput(inputId = "gcpskills", 
-                                              label = h5("GCP Skill Area:"), 
-                                              choices = unname(gcp_skills),
-                                              multiple = TRUE,
-                                              selectize = TRUE
-                                              ),
-                                  selectInput(inputId = "gcpknowledge", 
-                                              label = h5("GCP Knowledge Area:"), 
-                                              choices = unname(gcp_knowledge),
-                                              multiple = TRUE,
-                                              selectize = TRUE
-                                              ),
-                                  hr(), br(),              
+                                  checkboxInput("nearby", label = h5("Include Nearby Campuses", 
+                                                                     bsButton("nearby", label = " ", icon = icon("question"), 
+                                                                              style = "info", size = "extra-small")
+                                                                        )
+                                                ),
+                                  checkboxInput("online", label = h5("Include Online Classes",
+                                                                     bsButton("nearby", label = " ", icon = icon("question"), 
+                                                                              style = "info", size = "extra-small")
+                                                                        )
+                                                ),
+                                  hr(),
+
+                                  h2("Additional options: "), br(), br(),
+                                  bs_accordion(id = "planner_subset_options") %>%
+                                          bs_set_opts(panel_type = "primary") %>%
+                                          bs_append(title = "Course type", content = div(selectInput(inputId = "department", 
+                                                                                                     label = "Department",
+                                                                                                     choices = choices_department,
+                                                                                                     multiple = TRUE,
+                                                                                                     selectize = TRUE
+                                                                                                ),
+                                                                                    selectInput(inputId = "program_level", 
+                                                                                                label = "Program Level",
+                                                                                                choices = c("GRAD", "UNDG"),
+                                                                                                multiple = TRUE,
+                                                                                                selectize = TRUE
+                                                                                                ),
+                                                                                    textInput("prefix", 
+                                                                                              label = "Course prefix", 
+                                                                                              value = "Example: BUSN"),
+                                                                                    sliderInput("course_number", 
+                                                                                                label = "Course range", 
+                                                                                                min = 1000, 
+                                                                                                max = 8000, 
+                                                                                                value = c(2000, 3000))        
+                                                                                        )
+                                                    
+                                                ) %>%
+                                          bs_append(title = "Days & Time", content = div(checkboxGroupInput("days", 
+                                                                                                     label = "Days", 
+                                                                                                     choices = list("Monday" = "M", 
+                                                                                                                    "Tuesday" = "T",
+                                                                                                                    "Wednesday" = "W",
+                                                                                                                    "Thursday" = "Th",
+                                                                                                                    "Friday" = "F",
+                                                                                                                    "Saturday" = "S"),
+                                                                                                     selected = "Monday"),
+                                                                                        sliderInput("time", 
+                                                                                              label = "Time", 
+                                                                                              min = 0700, 
+                                                                                              max = 2200, 
+                                                                                              value = c(1000, 1300)
+                                                                                              )        
+                                                                                )
+                                                ) %>%
+                                          bs_append(title = "Global Citizenship Program (GCP)", content = div(selectInput(inputId = "gcpskills", 
+                                                                                              label = "Skill Area(s)", 
+                                                                                              choices = unname(gcp_skills),
+                                                                                              multiple = TRUE,
+                                                                                              selectize = TRUE
+                                                                                                ),
+                                                                                  selectInput(inputId = "gcpknowledge", 
+                                                                                              label = "Knowledge Area(s)", 
+                                                                                              choices = unname(gcp_knowledge),
+                                                                                              multiple = TRUE,
+                                                                                              selectize = TRUE
+                                                                                                ),
+                                                                                  checkboxInput("keys", label = h5("Include Keystone Seminars"))
+                                                                                  )
+                                                ),
+                                  hr(),
                                   actionButton("Add_to_planner", label = h5("Add to planner")),
-                                  actionButton("Remove_from_planner", label = h5("Remove from planner")),
-                                  br(), br()
-                                  #img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo", width = "auto", height = "auto")
-                        ),
+                                  actionButton("Remove_from_planner", label = h5("Remove from planner"))
+                                ),
                   
                   mainPanel(
                           tabsetPanel(type = "tabs", 
