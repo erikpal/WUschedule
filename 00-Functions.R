@@ -3,6 +3,8 @@
 ##last retreived data set.
 
 loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
+      require(dplyr)
+      
       if (update == TRUE) {
             source("../Informer/00-Functions-OpenIQY.R")
             
@@ -36,7 +38,6 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
             ##Concatenate the titles
             x$COTITLE <- paste(x$COTITLE1, x$COTITLE2, x$COTITLE3)
             
-            
             ##Remove any courses that do not have any of the required variables
             x <- x[!x$SECLOC == "",]
             x <- x[!x$TERM == "",]
@@ -48,17 +49,10 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
             ##Recode BUILDINGDESC to say Online
             x$BUILDINGDESC[x$ONLINE] <- "Online"
             
-            #Remove unused variables
-            #x$`Section  Location` <- NULL
-            x$`Department Code` <- NULL
-            x$`Course Number` <- NULL
-            x$`Term Code` <- NULL
-            x$`Calendar Year - Section` <- NULL
-            x$`IM Description` <- NULL
-            x$`Section Number Code` <- NULL
-            
             ##Experimenting with buttons in the table
-            x$VIEW <- ""
+            #x$VIEW <- ""
+            
+            x$STATUS <- ifelse(x$stat %in% c("X", "I"), "Canceled", "Open")
             
             ##Add GCP Details
             gcp_codes <- c("CRI" = "Critical Thinking",
@@ -92,6 +86,23 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
             x$ARTS <- x$genedcatc == "ARTS"
             x$PNW <- x$genedcatc == "PNW"
             x$QL <- x$genedcatc == "QL"
+            
+            
+            ##Add course descriptions from saved flat file
+            y <- readRDS("../Webster Catalog/CatalogSnapshot.Rdata") %>% 
+                  select(PREFIX, NUMBER, DESC_CLEAN, ATTS) %>% 
+                  distinct(PREFIX, NUMBER, .keep_all = TRUE)
+            
+            x <- left_join(x, y, c("SUBJECT" = "PREFIX", "COURSENO" = "NUMBER"))
+            
+            #Remove unused variables
+            # x$`Section  Location` <- NULL
+            # x$`Department Code` <- NULL
+            # x$`Course Number` <- NULL
+            # x$`Term Code` <- NULL
+            # x$`Calendar Year - Section` <- NULL
+            # x$`IM Description` <- NULL
+            # x$`Section Number Code` <- NULL
             
             #Save
             saveRDS(x, path)

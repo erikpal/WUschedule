@@ -4,16 +4,16 @@ library(shinyBS)
 library(bsplus)
 library(DT)
 source("00-Functions.R")
+source("01-Configs.R")
 
 ##Load the data
-data <- loadFrame("../sources/schedule_frame.RDS")
+data <- loadFrame(pathToScheduleData)
 
 ##Create new colummns
 data$VIEW <- ""
 data$PLANNER <- FALSE
 data$GCPSKILL <- FALSE
 data$GCPKNOWLEDGE <- FALSE
-
 
 ##Set some variable from the complete available data set
 default_terms <- names(defaultTerms())[unlist(defaultTerms())]
@@ -103,21 +103,16 @@ shinyServer(function(input, output, session) {
                                               multiple = TRUE, 
                                               selectize = TRUE
                                                 ),
-                                  checkboxInput("nearby", label = h5("Include Nearby Campuses", 
-                                                                     bsButton("nearby", label = " ", icon = icon("question"), 
-                                                                              style = "info", size = "extra-small")
-                                                                        )
-                                                ),
-                                  checkboxInput("online", label = h5("Include Online Classes",
-                                                                     bsButton("nearby", label = " ", icon = icon("question"), 
-                                                                              style = "info", size = "extra-small")
-                                                                        )
-                                                ),
+                                  checkboxInput("nearby", "Include Nearby Campuses"),
+                                  checkboxInput("online", label = h5("Include Online Classes")),
                                   hr(),
+                                  
+                                  
 
                                   h2("Additional options: "), br(), br(),
-                                  bs_accordion(id = "planner_subset_options") %>%
-                                          bs_set_opts(panel_type = "primary") %>%
+                                 
+                                  bs_accordion(id = "course_options") %>%
+                                  bs_set_opts(panel_type = "primary") %>%
                                           bs_append(title = "Course type", content = div(selectInput(inputId = "department", 
                                                                                                      label = "Department",
                                                                                                      choices = choices_department,
@@ -140,7 +135,9 @@ shinyServer(function(input, output, session) {
                                                                                                 value = c(2000, 3000))        
                                                                                         )
                                                     
-                                                ) %>%
+                                                ),
+                                  bs_accordion(id = "time_options") %>%
+                                  bs_set_opts(panel_type = "primary") %>%
                                           bs_append(title = "Days & Time", content = div(checkboxGroupInput("days", 
                                                                                                      label = "Days", 
                                                                                                      choices = list("Monday" = "M", 
@@ -157,22 +154,23 @@ shinyServer(function(input, output, session) {
                                                                                               value = c(1000, 1300)
                                                                                               )        
                                                                                 )
-                                                ) %>%
-                                          bs_append(title = "Global Citizenship Program (GCP)", content = div(selectInput(inputId = "gcpskills", 
+                                                ),
+                                  bs_accordion(id = "gcp_options") %>% 
+                                  #bs_set_opts() %>%
+                                          bs_append(title = "Global Citizenship Program (GCP)", content = div(
+                                                                                              selectInput(inputId = "gcpskills", 
                                                                                               label = "Skill Area(s)", 
                                                                                               choices = unname(gcp_skills),
                                                                                               multiple = TRUE,
-                                                                                              selectize = TRUE
-                                                                                                ),
+                                                                                              selectize = TRUE),
                                                                                   selectInput(inputId = "gcpknowledge", 
                                                                                               label = "Knowledge Area(s)", 
                                                                                               choices = unname(gcp_knowledge),
                                                                                               multiple = TRUE,
-                                                                                              selectize = TRUE
-                                                                                                ),
-                                                                                  checkboxInput("keys", label = h5("Include Keystone Seminars"))
+                                                                                              selectize = TRUE),
+                                                                                  checkboxInput("keys", label = h5("Include Keystone Seminars")) 
                                                                                   )
-                                                ),
+                                                    ),
                                   hr(),
                                   actionButton("Add_to_planner", label = h5("Add to planner")),
                                   actionButton("Remove_from_planner", label = h5("Remove from planner"))
@@ -349,7 +347,9 @@ shinyServer(function(input, output, session) {
                         paste(
                               p(paste("Location:", section_data$BUILDINGDESC)),
                               p(paste("Instructor:", section_data$Name)),
-                              p(concourse_url)
+                              p(concourse_url), 
+                              p(paste("Description:", section_data$DESC)),
+                              p(paste("Notes:", section_data$ATTS))
                         )
                   )
             #msg <- paste(section_data$COURSENO, section_data$YEAR, section_data$TERM, "is taught by", section_data$Name, "at", section_data$SECLOC)
