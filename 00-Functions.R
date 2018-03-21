@@ -8,13 +8,15 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
       if (update == TRUE) {
             source("../Informer/00-Functions-OpenIQY.R")
             
-            days.offset <- 14
-            cap.offset <- 365 * 2
-            load.date <- as.character(format(Sys.Date() - days.offset, "%m/%d/%Y"))
-            cap.date <- as.character(format(Sys.Date() + cap.offset, "%m/%d/%Y"))
+            ##Use todays date minus offset, and today plus offset for the query
+            ##Cap_offset is used to exclude fat finger dates like 2051
+            days_offset <- 14
+            cap_offset <- 365 * 2
+            load_date <- as.character(format(Sys.Date() - days_offset, "%m/%d/%Y"))
+            cap_date <- as.character(format(Sys.Date() + cap_offset, "%m/%d/%Y"))
             
-            qparams <- list("parameter_0" = load.date, 
-                            "parameter_1" = cap.date) 
+            qparams <- list("parameter_0" = load_date, 
+                            "parameter_1" = cap_date) 
 
             x <- openIqy("../Informer/Queries/Schedule Frame.iqy", qparams)
             
@@ -45,12 +47,10 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
 
             ##Make a column to index online classes
             x$ONLINE <- grepl("Online", x$IMDESC)
+            x$WEBNET <- grepl("WebNet", x$IMDESC)
             
             ##Recode BUILDINGDESC to say Online
             x$BUILDINGDESC[x$ONLINE] <- "Online"
-            
-            ##Experimenting with buttons in the table
-            #x$VIEW <- ""
             
             x$STATUS <- ifelse(x$stat %in% c("X", "I"), "Canceled", "Open")
             
@@ -87,22 +87,12 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
             x$PNW <- x$genedcatc == "PNW"
             x$QL <- x$genedcatc == "QL"
             
-            
             ##Add course descriptions from saved flat file
             y <- readRDS("../Webster Catalog/CatalogSnapshot.Rdata") %>% 
                   select(PREFIX, NUMBER, DESC_CLEAN, ATTS) %>% 
                   distinct(PREFIX, NUMBER, .keep_all = TRUE)
             
             x <- left_join(x, y, c("SUBJECT" = "PREFIX", "COURSENO" = "NUMBER"))
-            
-            #Remove unused variables
-            # x$`Section  Location` <- NULL
-            # x$`Department Code` <- NULL
-            # x$`Course Number` <- NULL
-            # x$`Term Code` <- NULL
-            # x$`Calendar Year - Section` <- NULL
-            # x$`IM Description` <- NULL
-            # x$`Section Number Code` <- NULL
             
             #Save
             saveRDS(x, path)

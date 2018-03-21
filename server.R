@@ -7,7 +7,7 @@ source("00-Functions.R")
 source("01-Configs.R")
 
 ##Load the data
-data <- loadFrame(pathToScheduleData)
+data <- loadFrame(schedule_data_path)
 
 ##Create new colummns
 data$VIEW <- ""
@@ -232,6 +232,7 @@ shinyServer(function(input, output, session) {
                   DT <- DT[DT$DEPTTXT %in% input$department, ]
             }
             
+            ##GCP Subsetting happens by setting the skill or knowledge column to TRUE based on selected items
             if (!is.null(input$gcpskills)) {
                   if("Critical Thinking" %in% input$gcpskills) {
                         DT$GCPSKILL[DT$CRI] <- TRUE
@@ -273,7 +274,7 @@ shinyServer(function(input, output, session) {
                   DT <- DT[DT$GCPKNOWLEDGE, ]
             }
             
-
+            ##Render the data frame to a DT
             DT::datatable(DT, escape = FALSE, 
                           rownames = FALSE,
                           select = "none",
@@ -341,7 +342,6 @@ shinyServer(function(input, output, session) {
                                  section_data$SECNO, sep = "_")
             concourse_url <- paste0("https://api.apidapter.com/v0/websterfdc/concourse_linker_1?course=", concourseid)
             concourse_url <- a("Click to View Syllabus in Concourse.", target = "_blank", href = concourse_url)
-            #concourse_link
             
             msg <- HTML(
                         paste(
@@ -358,13 +358,13 @@ shinyServer(function(input, output, session) {
                   title = title,
                   msg,
                   easyClose = TRUE
-            ))
+                  ))
       })
       
       observeEvent(input$last_click, {
             ##This is as secondary action on the view button
             ##how can we use it to allow someone to view twice in a row
-            ##selected_row <<- as.numeric(input$last_click)
+            selected_row <- as.numeric(input$last_click)
       })
       
       observeEvent(input$Add_to_planner,{
