@@ -166,14 +166,16 @@ shinyServer(function(input, output, session) {
                                                                                               choices = unname(gcp_knowledge),
                                                                                               multiple = TRUE,
                                                                                               selectize = TRUE),
-                                                                                  checkboxInput("keys", label = h5("Include Keystone Seminars")) 
+                                                                                  checkboxInput("keys", 
+                                                                                                label = h5("Keystone Seminars")
+                                                                                                ) 
                                                                                   )
                                                     ),
                                   bs_accordion(id = "keyword_search") %>%
                                   bs_set_opts(panel_type = "primary") %>%
                                           bs_append(title = "Keyword Search", content = div(textInput("keyword", 
                                                                                         label = " ", 
-                                                                                        value = "Example: Law")
+                                                                                        value = "hello")
                                                                                         )
                                                    ),
                                   hr(),
@@ -213,7 +215,6 @@ shinyServer(function(input, output, session) {
             #Set a vector to hold the selected campuses
             selected_campuses <- input$campus
 
-            
             if(input$nearby == TRUE) {
                   combine_codes <- unique(DT$COMBINELOC[DT$BUILDINGDESC %in% selected_campuses])
                   selected_campuses <- unique(DT$BUILDINGDESC[DT$COMBINELOC %in% combine_codes])
@@ -277,6 +278,12 @@ shinyServer(function(input, output, session) {
                   }
                   DT <- DT[DT$GCPKNOWLEDGE, ]
             }
+            
+            if (input$keys == TRUE) {
+                    DT <- DT[DT$SUBJECT == "KEYS", ]
+            }
+            
+            ##keyword <- DT[grep(keyword, DT$COTITLE)]
             
             DT::datatable(DT, escape = FALSE, 
                           rownames = FALSE,
