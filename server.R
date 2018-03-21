@@ -7,7 +7,7 @@ source("00-Functions.R")
 source("01-Configs.R")
 
 ##Load the data
-data <- loadFrame(pathToScheduleData)
+data <- loadFrame(schedule_data_path)
 
 ##Create new colummns
 data$VIEW <- ""
@@ -103,11 +103,9 @@ shinyServer(function(input, output, session) {
                                               multiple = TRUE, 
                                               selectize = TRUE
                                                 ),
-                                  checkboxInput("nearby", "Include Nearby Campuses"),
+                                  checkboxInput("nearby", label = h5("Include Nearby Campuses")),
                                   checkboxInput("online", label = h5("Include Online Classes")),
                                   hr(),
-                                  
-                                  
 
                                   h2("Additional options: "), br(), br(),
                                  
@@ -156,7 +154,7 @@ shinyServer(function(input, output, session) {
                                                                                 )
                                                 ),
                                   bs_accordion(id = "gcp_options") %>% 
-                                  #bs_set_opts() %>%
+                                  bs_set_opts(panel_type = "primary") %>%
                                           bs_append(title = "Global Citizenship Program (GCP)", content = div(
                                                                                               selectInput(inputId = "gcpskills", 
                                                                                               label = "Skill Area(s)", 
@@ -171,6 +169,13 @@ shinyServer(function(input, output, session) {
                                                                                   checkboxInput("keys", label = h5("Include Keystone Seminars")) 
                                                                                   )
                                                     ),
+                                  bs_accordion(id = "keyword_search") %>%
+                                  bs_set_opts(panel_type = "primary") %>%
+                                          bs_append(title = "Keyword Search", content = div(textInput("keyword", 
+                                                                                        label = " ", 
+                                                                                        value = "Example: Law")
+                                                                                        )
+                                                   ),
                                   hr(),
                                   actionButton("Add_to_planner", label = h5("Add to planner")),
                                   actionButton("Remove_from_planner", label = h5("Remove from planner"))
@@ -273,7 +278,6 @@ shinyServer(function(input, output, session) {
                   DT <- DT[DT$GCPKNOWLEDGE, ]
             }
             
-
             DT::datatable(DT, escape = FALSE, 
                           rownames = FALSE,
                           select = "none",
@@ -301,11 +305,9 @@ shinyServer(function(input, output, session) {
                                     ')
             
             DTplan <- DTplan[DTplan$PLANNER == TRUE, ]
-
             
             DTplanview <- DTplan[, cols]##Trim to include one the colums we want in the DT
             colnames(DTplanview) <- names(cols)
-            
              
             DT::datatable(DTplanview, escape = FALSE, select = "none",
                           extensions = 'Buttons', options = list(dom = 'Bfrtip', 
@@ -362,7 +364,7 @@ shinyServer(function(input, output, session) {
       })
       
       observeEvent(input$last_click, {
-            ##This is as secondary action on the view button
+            ##This is a secondary action on the view button
             ##how can we use it to allow someone to view twice in a row
             ##selected_row <<- as.numeric(input$last_click)
       })
