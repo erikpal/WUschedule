@@ -162,3 +162,8 @@ defaultYear <- function() {
       return(year)
 }
 
+##Function to accompany bsplus accordian to set collapse to off
+setCollapse <- function(x) {
+      x$children[[1]]$children[[2]]$attribs[[5]] <- NULL
+      return(x)
+}

@@ -133,7 +133,8 @@ shinyServer(function(input, output, session) {
                                                                                                 value = c(2000, 3000))        
                                                                                         )
                                                     
-                                                ),
+                                                ) %>% 
+                                        setCollapse(),
                                   bs_accordion(id = "time_options") %>%
                                   bs_set_opts(panel_type = "primary") %>%
                                           bs_append(title = "Days & Time", content = div(checkboxGroupInput("days", 
@@ -152,7 +153,8 @@ shinyServer(function(input, output, session) {
                                                                                               value = c(1000, 1300)
                                                                                               )        
                                                                                 )
-                                                ),
+                                                ) %>% 
+                                        setCollapse(),
                                   bs_accordion(id = "gcp_options") %>% 
                                   bs_set_opts(panel_type = "primary") %>%
                                           bs_append(title = "Global Citizenship Program (GCP)", content = div(
@@ -170,14 +172,17 @@ shinyServer(function(input, output, session) {
                                                                                                 label = h5("Keystone Seminars")
                                                                                                 ) 
                                                                                   )
-                                                    ),
+                                                    ) %>% 
+                                        setCollapse(),
                                   bs_accordion(id = "keyword_search") %>%
                                   bs_set_opts(panel_type = "primary") %>%
-                                          bs_append(title = "Keyword Search", content = div(textInput("keyword", 
-                                                                                        label = " ", 
-                                                                                        value = "hello")
-                                                                                        )
-                                                   ),
+                                        bs_append(title = "Keyword Search", 
+                                                  content = div(textInput("keyword",
+                                                                          label = " ",
+                                                                          value = "hello")
+                                                                )
+                                                   ) %>% 
+                                  setCollapse(),
                                   hr(),
                                   actionButton("Add_to_planner", label = h5("Add to planner")),
                                   actionButton("Remove_from_planner", label = h5("Remove from planner"))
@@ -280,16 +285,14 @@ shinyServer(function(input, output, session) {
                   DT <- DT[DT$GCPKNOWLEDGE, ]
             }
             
-<<<<<<< HEAD
+
             ##Render the data frame to a DT
-=======
             if (input$keys == TRUE) {
                     DT <- DT[DT$SUBJECT == "KEYS", ]
             }
             
             ##keyword <- DT[grep(keyword, DT$COTITLE)]
             
->>>>>>> ea7105bd54054d95aec34e3d8723f27ab582efb3
             DT::datatable(DT, escape = FALSE, 
                           rownames = FALSE,
                           select = "none",
