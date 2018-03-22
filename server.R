@@ -1,7 +1,7 @@
 library(shiny)
 library(shinythemes)
 library(shinyBS)
-library(bsplus)
+#library(bsplus)
 library(DT)
 source("00-Functions.R")
 source("01-Configs.R")
@@ -14,12 +14,16 @@ data$VIEW <- ""
 data$PLANNER <- FALSE
 data$GCPSKILL <- FALSE
 data$GCPKNOWLEDGE <- FALSE
+data$GCPKEYS <- ifelse(data$SUBJECT == "KEYS", TRUE, FALSE)
+data$GCPFRSH <- ifelse(data$SUBJECT == "FRSH", TRUE, FALSE)
+
 
 ##Set some variable from the complete available data set
 default_terms <- names(defaultTerms())[unlist(defaultTerms())]
 choices_year <- unique(data$YEAR[order(data$YEAR)])
 choices_campus <- unique(data$BUILDINGDESC[order(data$BUILDINGDESC)])
 choices_department <- unique(data$DEPTTXT[order(data$DEPTTXT)])
+choices_prefix <- unique(data$SUBJECT[order(data$SUBJECT)])
 
 gcp_skills <- c("CRI" = "Critical Thinking",
                 "ETH" = "Ethical Reasoning",
@@ -76,6 +80,7 @@ shinyServer(function(input, output, session) {
                   br(), br(), br(), br(), 
                   tags$h2(HTML("<center>Course Schedules</center>")),
                   br(),
+
                   
                   sidebarLayout(
                           sidebarPanel(
@@ -109,81 +114,80 @@ shinyServer(function(input, output, session) {
 
                                   h2("Additional options: "), br(), br(),
                                  
-                                  bs_accordion(id = "course_options") %>%
-                                  bs_set_opts(panel_type = "primary") %>%
-                                          bs_append(title = "Course type", content = div(selectInput(inputId = "department", 
-                                                                                                     label = "Department",
-                                                                                                     choices = choices_department,
-                                                                                                     multiple = TRUE,
-                                                                                                     selectize = TRUE
-                                                                                                ),
-                                                                                    selectInput(inputId = "program_level", 
-                                                                                                label = "Program Level",
-                                                                                                choices = c("GRAD", "UNDG"),
-                                                                                                multiple = TRUE,
-                                                                                                selectize = TRUE
-                                                                                                ),
-                                                                                    textInput("prefix", 
-                                                                                              label = "Course prefix", 
-                                                                                              value = "Example: BUSN"),
-                                                                                    sliderInput("course_number", 
-                                                                                                label = "Course range", 
-                                                                                                min = 1000, 
-                                                                                                max = 8000, 
-                                                                                                value = c(2000, 3000))        
-                                                                                        )
-                                                    
-                                                ) %>% 
-                                        setCollapse(),
-                                  bs_accordion(id = "time_options") %>%
-                                  bs_set_opts(panel_type = "primary") %>%
-                                          bs_append(title = "Days & Time", content = div(checkboxGroupInput("days", 
-                                                                                                     label = "Days", 
-                                                                                                     choices = list("Monday" = "M", 
-                                                                                                                    "Tuesday" = "T",
-                                                                                                                    "Wednesday" = "W",
-                                                                                                                    "Thursday" = "Th",
-                                                                                                                    "Friday" = "F",
-                                                                                                                    "Saturday" = "S"),
-                                                                                                     selected = "Monday"),
-                                                                                        sliderInput("time", 
-                                                                                              label = "Time", 
-                                                                                              min = 0700, 
-                                                                                              max = 2200, 
-                                                                                              value = c(1000, 1300)
-                                                                                              )        
-                                                                                )
-                                                ) %>% 
-                                        setCollapse(),
-                                  bs_accordion(id = "gcp_options") %>% 
-                                  bs_set_opts(panel_type = "primary") %>%
-                                          bs_append(title = "Global Citizenship Program (GCP)", content = div(
-                                                                                              selectInput(inputId = "gcpskills", 
-                                                                                              label = "Skill Area(s)", 
-                                                                                              choices = unname(gcp_skills),
-                                                                                              multiple = TRUE,
-                                                                                              selectize = TRUE),
-                                                                                  selectInput(inputId = "gcpknowledge", 
-                                                                                              label = "Knowledge Area(s)", 
-                                                                                              choices = unname(gcp_knowledge),
-                                                                                              multiple = TRUE,
-                                                                                              selectize = TRUE),
-                                                                                  checkboxInput("keys", 
-                                                                                                label = h5("Keystone Seminars")
-                                                                                                ) 
-                                                                                  )
-                                                    ) %>% 
-                                        setCollapse(),
-                                  bs_accordion(id = "keyword_search") %>%
-                                  bs_set_opts(panel_type = "primary") %>%
-                                        bs_append(title = "Keyword Search", 
-                                                  content = div(textInput("keyword",
-                                                                          label = " ",
-                                                                          value = "hello")
-                                                                )
-                                                   ) %>% 
-                                  setCollapse(),
-                                  hr(),
+                                  customSBCollapsePanel("Course Type:", 
+                                                        tagList(
+                                                              selectInput(inputId = "department",
+                                                                          label = "Department",
+                                                                          choices = choices_department,
+                                                                          multiple = TRUE,
+                                                                          selectize = TRUE
+                                                              ),
+                                                              selectInput(inputId = "program_level",
+                                                                          label = "Program Level",
+                                                                          choices = c("GRAD", "UNDG"),
+                                                                          multiple = TRUE,
+                                                                          selectize = TRUE
+                                                              ),
+                                                              selectInput(inputId = "subject_prefix",
+                                                                          label = "Subject",
+                                                                          choices = choices_prefix,
+                                                                          multiple = TRUE,
+                                                                          selectize = TRUE
+                                                              ),
+                                                              textInput("course_number",
+                                                                        label = "Course Number"
+                                                              )
+                                                        )
+                                  ),
+                                  
+                                  # customSBCollapsePanel("Date and Time:",
+                                  #                       tagList(
+                                  #                             checkboxGroupInput("days", 
+                                  #                                                label = "Days", 
+                                  #                                                choices = list("Monday" = "M", 
+                                  #                                                               "Tuesday" = "T",
+                                  #                                                               "Wednesday" = "W",
+                                  #                                                               "Thursday" = "Th",
+                                  #                                                               "Friday" = "F",
+                                  #                                                               "Saturday" = "S"),
+                                  #                                                selected = "Monday"),
+                                  #                             sliderInput("date_range", 
+                                  #                                         "Times", 
+                                  #                                         min = as.POSIXct("2016-02-01 00:00"),
+                                  #                                         max = as.POSIXct("2016-02-01 23:59"),
+                                  #                                         value = c(as.POSIXct("2016-02-01 08:00"),
+                                  #                                                   as.POSIXct("2016-02-01 22:00")),
+                                  #                                         timeFormat = "%H:%M", 
+                                  #                                         ticks = TRUE,
+                                  #                                         step = 300
+                                  #                             )
+                                  #                       )
+                                  #                       ),
+                                  
+                                  customSBCollapsePanel("Global Citizenship Program (GCP):", 
+                                                        tagList(
+                                                              selectInput(inputId = "gcpskills", 
+                                                                          label = "Skill Area(s)", 
+                                                                          choices = unname(gcp_skills),
+                                                                          multiple = TRUE,
+                                                                          selectize = TRUE),
+                                                              selectInput(inputId = "gcpknowledge", 
+                                                                          label = "Knowledge Area(s)", 
+                                                                          choices = unname(gcp_knowledge),
+                                                                          multiple = TRUE,
+                                                                          selectize = TRUE),
+                                                              checkboxInput("keys", 
+                                                                            label = h5("Include Keystone Seminars")
+                                                              ),
+                                                              checkboxInput("frsh", 
+                                                                            label = h5("Include First-year Seminars")
+                                                              ) 
+                                                        )
+                                  ),
+                                  customSBCollapsePanel("Keyword Search:", 
+                                                        textInput("keyword",
+                                                                  label = "Enter word or phrase")
+                                                        ),
                                   actionButton("Add_to_planner", label = h5("Add to planner")),
                                   actionButton("Remove_from_planner", label = h5("Remove from planner"))
                                 ),
@@ -219,6 +223,8 @@ shinyServer(function(input, output, session) {
             ##Required values
             #Set a vector to hold the selected campuses
             selected_campuses <- input$campus
+            
+
 
             if(input$nearby == TRUE) {
                   combine_codes <- unique(DT$COMBINELOC[DT$BUILDINGDESC %in% selected_campuses])
@@ -234,14 +240,32 @@ shinyServer(function(input, output, session) {
                   DT$BUILDINGDESC %in% selected_campuses |##This OR is problematic, fix
                   DT$ONLINE == TRUE, ]
             
+
+            
             ##Optional values
             if (!input$online == TRUE) {
                   DT <- DT[DT$BUILDINGDESC %in% selected_campuses, ]
             }
             
+            #######These are the "include" options, isolated here and rejoined at the bottome
+            if (input$keys == TRUE) {
+                  DTKEYS <- DT[DT$GCPKEYS, ]
+            }
+            
+            if (input$frsh== TRUE) {
+                  DTFRSH <- DT[DT$GCPFRSH, ]
+            }
+            #######
+            
             if (!is.null(input$department)) {
                   DT <- DT[DT$DEPTTXT %in% input$department, ]
             }
+            
+            if (!is.null(input$subject_prefix)) {
+                  DT <- DT[DT$SUBJECT%in% input$subject_prefix, ]
+            }
+            
+            
             
             ##GCP Subsetting happens by setting the skill or knowledge column to TRUE based on selected items
             if (!is.null(input$gcpskills)) {
@@ -286,19 +310,26 @@ shinyServer(function(input, output, session) {
             }
             
 
-            ##Render the data frame to a DT
-            if (input$keys == TRUE) {
-                    DT <- DT[DT$SUBJECT == "KEYS", ]
-            }
+
             
             ##keyword <- DT[grep(keyword, DT$COTITLE)]
+            
+            ##Rejoin Includes
+            if (input$keys == TRUE) {
+                  DT <- unique(rbind(DT, DTKEYS))##Does this result in duplicate KEYS?
+            }
+            
+            if (input$frsh == TRUE) {
+                  DT <- unique(rbind(DT, DTFRSH))##Does this result in duplicate KEYS?
+            }
+            
             
             DT::datatable(DT, escape = FALSE, 
                           rownames = FALSE,
                           select = "none",
                           colnames = cols,
                           extensions = c('ColReorder', 'Responsive'),
-                          options = list(sDom  = '<"top">lfrt<"bottom">ip',
+                          options = list(sDom  = '<"top">lrt<"bottom">ip',
                                          colReorder = list(realtime = FALSE))
                           ) %>% formatStyle(columns = "stat", 
                                             target = "row", 
@@ -386,6 +417,9 @@ shinyServer(function(input, output, session) {
       observeEvent(input$Add_to_planner,{
             row_to_add <- as.numeric(gsub("Row","",input$checked_rows))
             vals$Data$PLANNER[row_to_add] <- TRUE
+      })
+      
+      observeEvent(input$keyword_search,{
       })
       
       observeEvent(input$Remove_from_planner,{
