@@ -1,6 +1,7 @@
 library(shiny)
 library(shinythemes)
 library(shinyBS)
+library(shinydashboard)
 #library(bsplus)
 library(DT)
 source("00-Functions.R")
@@ -59,18 +60,18 @@ shinyServer(function(input, output, session) {
       output$mainbody <- renderUI({
             fluidPage(
                   tags$script(HTML(
-                          '$(document).on("click", "input", function () {
-                          var checkboxes = document.getElementsByName("row_selected");
-                          var checkboxesChecked = [];
-                          for (var i=0; i<checkboxes.length; i++) {
-                          
-                          if (checkboxes[i].checked) {
-                          checkboxesChecked.push(checkboxes[i].value);
-                          }
-                          }
-                          Shiny.onInputChange("checked_rows", checkboxesChecked);
-                        })'
-                  )),
+                                  '$(document).on("click", "input", function () {
+                                  var checkboxes = document.getElementsByName("row_selected");
+                                  var checkboxesChecked = [];
+                                  for (var i=0; i<checkboxes.length; i++) {
+                                  
+                                  if (checkboxes[i].checked) {
+                                  checkboxesChecked.push(checkboxes[i].value);
+                                  }
+                                  }
+                                  Shiny.onInputChange("checked_rows", checkboxesChecked);
+                                })'
+                        )),
                  
                   ## Custom Webster branded theme
                   theme = "mystyle.css",
@@ -81,9 +82,9 @@ shinyServer(function(input, output, session) {
                   tags$h2(HTML("<center>Course Schedules</center>")),
                   br(),
 
-                  
                   sidebarLayout(
                           sidebarPanel(
+                                  ## Main panel for default subsetting
                                   h2("Search by: "), br(), br(),
                                   checkboxGroupInput("year", "Year",
                                                      choices = choices_year,
@@ -112,8 +113,9 @@ shinyServer(function(input, output, session) {
                                   checkboxInput("online", label = h5("Include Online Classes")),
                                   hr(),
 
+                                  ## Custom collapsible sidebar panels for additional subsetting
                                   h2("Additional options: "), br(), br(),
-                                 
+                                  
                                   customSBCollapsePanel("Course Type:", 
                                                         tagList(
                                                               selectInput(inputId = "department",
@@ -184,9 +186,8 @@ shinyServer(function(input, output, session) {
                                                               ) 
                                                         )
                                   ),
-                                  customSBCollapsePanel("Keyword Search:", 
-                                                        textInput("keyword",
-                                                                  label = "Enter word or phrase")
+                                  customSBCollapsePanel("Keyword Search: ", sidebarSearchForm(textId = "searchText", buttonId = "searchButton",
+                                                                          label = "Search")
                                                         ),
                                   actionButton("Add_to_planner", label = h5("Add to planner")),
                                   actionButton("Remove_from_planner", label = h5("Remove from planner"))
@@ -217,19 +218,15 @@ shinyServer(function(input, output, session) {
                                                 Shiny.onInputChange(&quot;last_click&quot;,  Math.random())" 
                                           id = button_', 1:nrow(vals$Data),'>View</button>
                                    ')
-            #<button type = "button" class = "btn btn-default action-button\" onclick=\"Shiny.onInputChange(&quot;view_details&quot;,  this.id)\" id = button_', 1:nrow(vals$Data),'>View</button>
-            #Shiny.onInputChange('lastClick', Math.random()
             
             ##Required values
             #Set a vector to hold the selected campuses
             selected_campuses <- input$campus
-            
-
-
+           
             if(input$nearby == TRUE) {
                   combine_codes <- unique(DT$COMBINELOC[DT$BUILDINGDESC %in% selected_campuses])
                   selected_campuses <- unique(DT$BUILDINGDESC[DT$COMBINELOC %in% combine_codes])
-                  if("Online" %in% selected_campuses){
+                  if("Online" %in% selected_campuses) {
                         selected_campuses <- selected_campuses[!selected_campuses %in% "Online"]
                   }
                         
@@ -240,19 +237,17 @@ shinyServer(function(input, output, session) {
                   DT$BUILDINGDESC %in% selected_campuses |##This OR is problematic, fix
                   DT$ONLINE == TRUE, ]
             
-
-            
             ##Optional values
             if (!input$online == TRUE) {
                   DT <- DT[DT$BUILDINGDESC %in% selected_campuses, ]
             }
             
-            #######These are the "include" options, isolated here and rejoined at the bottome
+            #######These are the "include" options, isolated here and rejoined at the bottom
             if (input$keys == TRUE) {
                   DTKEYS <- DT[DT$GCPKEYS, ]
             }
             
-            if (input$frsh== TRUE) {
+            if (input$frsh == TRUE) {
                   DTFRSH <- DT[DT$GCPFRSH, ]
             }
             #######
@@ -264,8 +259,6 @@ shinyServer(function(input, output, session) {
             if (!is.null(input$subject_prefix)) {
                   DT <- DT[DT$SUBJECT%in% input$subject_prefix, ]
             }
-            
-            
             
             ##GCP Subsetting happens by setting the skill or knowledge column to TRUE based on selected items
             if (!is.null(input$gcpskills)) {
@@ -309,21 +302,19 @@ shinyServer(function(input, output, session) {
                   DT <- DT[DT$GCPKNOWLEDGE, ]
             }
             
-
-
+            ## Search box functionality
+            index <- grepl(pattern = input$searchText, x = DT$COTITLE, ignore.case = TRUE)
+            DT <- DT[index, ]
             
-            ##keyword <- DT[grep(keyword, DT$COTITLE)]
-            
-            ##Rejoin Includes
+            ## Rejoin Includes
             if (input$keys == TRUE) {
-                  DT <- unique(rbind(DT, DTKEYS))##Does this result in duplicate KEYS?
+                  DT <- unique(rbind(DT, DTKEYS)) ## Does this result in duplicate KEYS?
             }
             
             if (input$frsh == TRUE) {
                   DT <- unique(rbind(DT, DTFRSH))##Does this result in duplicate KEYS?
             }
-            
-            
+
             DT::datatable(DT, escape = FALSE, 
                           rownames = FALSE,
                           select = "none",
@@ -337,9 +328,6 @@ shinyServer(function(input, output, session) {
                                                                          c("yellow", "red")
                                                                          )
                                             )
-            
-            #DT <- DT[, cols]##Trim to include one the colums we want in the DT
-            #colnames(DT) <- names(cols)
       })
       
       output$plannertable <- DT::renderDataTable({
@@ -352,7 +340,7 @@ shinyServer(function(input, output, session) {
             
             DTplan <- DTplan[DTplan$PLANNER == TRUE, ]
             
-            DTplanview <- DTplan[, cols]##Trim to include one the colums we want in the DT
+            DTplanview <- DTplan[, cols]##Trim to include only the colums we want in the DT
             colnames(DTplanview) <- names(cols)
              
             DT::datatable(DTplanview, escape = FALSE, select = "none",
