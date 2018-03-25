@@ -204,8 +204,31 @@ customSBCollapsePanel <- function(name, content_tag_list) {
                         )#/div id0collapse
                     )#/panel id0
                 )#/id
-      ######################
+          ######################
       
       return(panel_tags)
 }
 
+
+##Incomplete function that loads section description from webster description app
+# getSectionDescription <- function(TERM, YEAR, SUBJECT, COURSENO, SECTION) {
+#       require(httr)
+#       
+#       url <- parse_url("http://apps.webster.edu/compcen/datadict/webcrs/files/TERMYEAR/COURSESECTION.html")
+#       
+#       TERMYEAR <- paste0(TERM, YEAR)
+#       COURSESECTION <- paste0(SUBJECT, "_", COURSENO, "_", SECTION)
+#       
+#       url$path <- gsub("TERMYEAR", TERMYEAR, url$path)
+#       url$path <- gsub("COURSESECTION", COURSESECTION, url$path)
+#       
+#       response <- GET(url)
+#       
+#       if (response$status_code == 404) {
+#             return("")
+#       }
+#       
+#       content(response)
+#       
+#       return(response)
+# }

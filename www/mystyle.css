@@ -62,6 +62,15 @@ th {
     color: #004990;
 }
 
+#Add_to_planner { 
+  float: right; 
+}
+
+#Remove_from_planner { 
+  float: right; 
+}
+
+
 /*
 td {
     background-color: #FFFFFF;

@@ -1,9 +1,9 @@
 library(shiny)
-library(shinythemes)
-library(shinyBS)
-library(shinydashboard)
-#library(bsplus)
 library(DT)
+library(shinythemes)
+library(shinydashboard)
+#library(shinyBS)
+#library(bsplus)
 source("00-Functions.R")
 source("01-Configs.R")
 
@@ -18,8 +18,8 @@ data$GCPKNOWLEDGE <- FALSE
 data$GCPKEYS <- ifelse(data$SUBJECT == "KEYS", TRUE, FALSE)
 data$GCPFRSH <- ifelse(data$SUBJECT == "FRSH", TRUE, FALSE)
 
-
 ##Set some variable from the complete available data set
+#selected_row <- NA
 default_terms <- names(defaultTerms())[unlist(defaultTerms())]
 choices_year <- unique(data$YEAR[order(data$YEAR)])
 choices_campus <- unique(data$BUILDINGDESC[order(data$BUILDINGDESC)])
@@ -54,364 +54,427 @@ cols <- c("Select" = "SELECT",
           )
 
 shinyServer(function(input, output, session) {
-      vals <- reactiveValues()
-      vals$Data <- data
-      
-      output$mainbody <- renderUI({
-            fluidPage(
-                  tags$script(HTML(
-                                  '$(document).on("click", "input", function () {
-                                  var checkboxes = document.getElementsByName("row_selected");
-                                  var checkboxesChecked = [];
-                                  for (var i=0; i<checkboxes.length; i++) {
-                                  
-                                  if (checkboxes[i].checked) {
-                                  checkboxesChecked.push(checkboxes[i].value);
-                                  }
-                                  }
-                                  Shiny.onInputChange("checked_rows", checkboxesChecked);
-                                })'
-                        )),
-                 
-                  ## Custom Webster branded theme
-                  theme = "mystyle.css",
-                  
-                  title = "Course Schedules",
-                  br(), br(), br(), br(), br(), 
-                  br(), br(), br(), br(), 
-                  tags$h2(HTML("<center>Course Schedules</center>")),
-                  br(),
+  
+  ## Create reactive values object for data -----
+  vals <- reactiveValues("Data" = data)
 
-                  sidebarLayout(
-                          sidebarPanel(
-                                  ## Main panel for default subsetting
-                                  h2("Search by: "), br(), br(),
-                                  checkboxGroupInput("year", "Year",
-                                                     choices = choices_year,
-                                                     selected = defaultYear(),
-                                                     inline = TRUE
-                                                ),
-                                  selectInput("term", "Session",
-                                              choices = c("Spring Semester" = "SP",
-                                                          "Spring Term 1" = "S1",
-                                                          "Spring Term 2" = "S2",
-                                                          "Summer Session" = "SU",
-                                                          "Fall Semester" = "FA",
-                                                          "Fall Term 1" = "F1",
-                                                          "Fall Term 2" = "F2"),
-                                              selected = default_terms,
+  ## Main Body UI: Contains the reactively generated output of the entire page UI -----
+  output$mainbody <- renderUI({
+    
+    fluidPage(
+      
+      ## Custom JavaScript: DT checkboxes -----
+      tags$script(HTML(
+        '$(document).on("click", "input", function () {
+          var checkboxes = document.getElementsByName("row_selected");
+          var checkboxesChecked = [];
+          for (var i=0; i<checkboxes.length; i++) {
+            if (checkboxes[i].checked) {
+            checkboxesChecked.push(checkboxes[i].value);
+            }
+          }
+          Shiny.onInputChange("checked_rows", checkboxesChecked);
+        })'
+      )),
+      
+      # Path to custom CSS
+      theme = "mystyle.css",
+      
+      # Page Title
+      title = "Course Schedule",
+      br(), br(), br(), br(), br(), 
+      br(), br(), br(), br(), 
+      tags$h2(HTML("<center>Course Schedules</center>")),
+      br(),
+      
+      ## Sidebar UI: Settings for left-side sidebar -----
+      sidebarLayout(
+        sidebarPanel(
+          
+          ## Sidebar: Required subsetting details -----
+          h2("Search by: "), br(), br(),
+          checkboxGroupInput("year", "Year",
+                             choices = choices_year,
+                             selected = defaultYear(),
+                             inline = TRUE
+          ),
+          selectInput("term", "Session",
+                      choices = c("Spring Semester" = "SP",
+                                  "Spring Term 1" = "S1",
+                                  "Spring Term 2" = "S2",
+                                  "Summer Session" = "SU",
+                                  "Fall Semester" = "FA",
+                                  "Fall Term 1" = "F1",
+                                  "Fall Term 2" = "F2"),
+                      selected = default_terms,
+                      multiple = TRUE,
+                      selectize = TRUE
+          ),
+          selectInput(inputId = "campus", 
+                      label = "Campus",
+                      choices = choices_campus,
+                      multiple = TRUE, 
+                      selectize = TRUE
+          ),
+          checkboxInput("nearby", label = h5("Include Nearby Campuses")),
+          checkboxInput("online", label = h5("Include Online Classes")),
+          hr(),
+          
+          ## Sidebar: Optional subsetting details
+          h2("Additional options: "), br(), br(),
+          
+          ### Sidebar: Options for subsetting by program/dept/subject ----
+          ## customSBCollapsePanel() is a custom function for making collapsable sidebar menus
+          ## Items in customSBCollapsePanel() must be in a tagList()
+          customSBCollapsePanel("Course Type:", 
+                                tagList(
+                                  selectInput(inputId = "department",
+                                              label = "Department",
+                                              choices = choices_department,
                                               multiple = TRUE,
                                               selectize = TRUE
-                                                ),
-                                  selectInput(inputId = "campus", 
-                                              label = "Campus",
-                                              choices = choices_campus,
-                                              multiple = TRUE, 
+                                  ),
+                                  selectInput(inputId = "program_level",
+                                              label = "Program Level",
+                                              choices = c("GRAD", "UNDG"),
+                                              multiple = TRUE,
                                               selectize = TRUE
-                                                ),
-                                  checkboxInput("nearby", label = h5("Include Nearby Campuses")),
-                                  checkboxInput("online", label = h5("Include Online Classes")),
-                                  hr(),
-
-                                  ## Custom collapsible sidebar panels for additional subsetting
-                                  h2("Additional options: "), br(), br(),
-                                  
-                                  customSBCollapsePanel("Course Type:", 
-                                                        tagList(
-                                                              selectInput(inputId = "department",
-                                                                          label = "Department",
-                                                                          choices = choices_department,
-                                                                          multiple = TRUE,
-                                                                          selectize = TRUE
-                                                              ),
-                                                              selectInput(inputId = "program_level",
-                                                                          label = "Program Level",
-                                                                          choices = c("GRAD", "UNDG"),
-                                                                          multiple = TRUE,
-                                                                          selectize = TRUE
-                                                              ),
-                                                              selectInput(inputId = "subject_prefix",
-                                                                          label = "Subject",
-                                                                          choices = choices_prefix,
-                                                                          multiple = TRUE,
-                                                                          selectize = TRUE
-                                                              ),
-                                                              textInput("course_number",
-                                                                        label = "Course Number"
-                                                              )
-                                                        )
                                   ),
-                                  
-                                  # customSBCollapsePanel("Date and Time:",
-                                  #                       tagList(
-                                  #                             checkboxGroupInput("days", 
-                                  #                                                label = "Days", 
-                                  #                                                choices = list("Monday" = "M", 
-                                  #                                                               "Tuesday" = "T",
-                                  #                                                               "Wednesday" = "W",
-                                  #                                                               "Thursday" = "Th",
-                                  #                                                               "Friday" = "F",
-                                  #                                                               "Saturday" = "S"),
-                                  #                                                selected = "Monday"),
-                                  #                             sliderInput("date_range", 
-                                  #                                         "Times", 
-                                  #                                         min = as.POSIXct("2016-02-01 00:00"),
-                                  #                                         max = as.POSIXct("2016-02-01 23:59"),
-                                  #                                         value = c(as.POSIXct("2016-02-01 08:00"),
-                                  #                                                   as.POSIXct("2016-02-01 22:00")),
-                                  #                                         timeFormat = "%H:%M", 
-                                  #                                         ticks = TRUE,
-                                  #                                         step = 300
-                                  #                             )
-                                  #                       )
-                                  #                       ),
-                                  
-                                  customSBCollapsePanel("Global Citizenship Program (GCP):", 
-                                                        tagList(
-                                                              selectInput(inputId = "gcpskills", 
-                                                                          label = "Skill Area(s)", 
-                                                                          choices = unname(gcp_skills),
-                                                                          multiple = TRUE,
-                                                                          selectize = TRUE),
-                                                              selectInput(inputId = "gcpknowledge", 
-                                                                          label = "Knowledge Area(s)", 
-                                                                          choices = unname(gcp_knowledge),
-                                                                          multiple = TRUE,
-                                                                          selectize = TRUE),
-                                                              checkboxInput("keys", 
-                                                                            label = h5("Include Keystone Seminars")
-                                                              ),
-                                                              checkboxInput("frsh", 
-                                                                            label = h5("Include First-year Seminars")
-                                                              ) 
-                                                        )
+                                  selectInput(inputId = "subject_prefix",
+                                              label = "Subject",
+                                              choices = choices_prefix,
+                                              multiple = TRUE,
+                                              selectize = TRUE
                                   ),
-                                  customSBCollapsePanel("Keyword Search: ", sidebarSearchForm(textId = "searchText", buttonId = "searchButton",
-                                                                          label = "Search")
-                                                        ),
-                                  actionButton("Add_to_planner", label = h5("Add to planner")),
-                                  actionButton("Remove_from_planner", label = h5("Remove from planner"))
-                                ),
-                  
-                  mainPanel(
-                          tabsetPanel(type = "tabs", 
-                                      tabPanel("Full Schedule", class = "one",
-                                               DT::dataTableOutput("maintable")
-                                               ),
-                                      tabPanel("My Planner", class = "one",
-                                               DT::dataTableOutput("plannertable")
-                                               )
-                                     )
-                           )
-                  )
+                                  textInput("course_number",
+                                            label = "Course Number"
+                                  )
+                                )
+          ),
+          
+          ### Sidebar: Options for subsetting by date/time ----
+          ## customSBCollapsePanel() is a custom function for making collapsable sidebar menus
+          ## Items in customSBCollapsePanel() must be in a tagList()
+          # customSBCollapsePanel("Date and Time:",
+          #                       tagList(
+          #                         checkboxGroupInput("days",
+          #                                            label = "Days",
+          #                                            choices = list("Monday" = "M",
+          #                                                           "Tuesday" = "T",
+          #                                                           "Wednesday" = "W",
+          #                                                           "Thursday" = "Th",
+          #                                                           "Friday" = "F",
+          #                                                           "Saturday" = "S"),
+          #                                            selected = "Monday"),
+          #                         sliderInput("date_range",
+          #                                     "Times",
+          #                                     min = as.POSIXct("2016-02-01 00:00"),
+          #                                     max = as.POSIXct("2016-02-01 23:59"),
+          #                                     value = c(as.POSIXct("2016-02-01 08:00"),
+          #                                               as.POSIXct("2016-02-01 22:00")),
+          #                                     timeFormat = "%H:%M",
+          #                                     ticks = TRUE,
+          #                                     step = 300
+          #                         )
+          #                       )
+          # ),
+          
+          ### Sidebar: Options for subsetting by GCP criteria ----
+          ## customSBCollapsePanel() is a custom function for making collapsable sidebar menus
+          ## Items in customSBCollapsePanel() must be in a tagList()
+          customSBCollapsePanel("Global Citizenship Program (GCP):", 
+                                tagList(
+                                  selectInput(inputId = "gcpskills", 
+                                              label = "Skill Area(s)", 
+                                              choices = unname(gcp_skills),
+                                              multiple = TRUE,
+                                              selectize = TRUE),
+                                  selectInput(inputId = "gcpknowledge", 
+                                              label = "Knowledge Area(s)", 
+                                              choices = unname(gcp_knowledge),
+                                              multiple = TRUE,
+                                              selectize = TRUE),
+                                  checkboxInput("keys", 
+                                                label = h5("Include Keystone Seminars")
+                                  ),
+                                  checkboxInput("frsh", 
+                                                label = h5("Include First-year Seminars")
+                                  ) 
+                                )
+          ),
+          
+          ### Sidebar: Options for subsetting by keyword ----
+          ## customSBCollapsePanel() is a custom function for making collapsable sidebar menus
+          ## Items in customSBCollapsePanel() must be in a tagList()
+          customSBCollapsePanel("Keyword Search: ", 
+                                sidebarSearchForm(textId = "searchText", 
+                                                  buttonId = "searchButton",
+                                                  label = "Search")
+          )
+        ),
+        
+        ## Main Panel UI: Settings for main content to right of sidebar -----
+        mainPanel(
+          actionButton("Add_to_planner", label = h5("Add to planner")),
+          actionButton("Remove_from_planner", label = h5("Remove from planner")),
+          tabsetPanel(type = "tabs", 
+                      tabPanel("Full Schedule", class = "one",
+                               DT::dataTableOutput("maintable")
+                      ),
+                      tabPanel("My Planner", class = "one",
+                               DT::dataTableOutput("plannertable")
+                      )
+          )
         )
-})
+      )
+    )
+  })
+  
+  ## Main Table: DT UI and data subsetting -----
+  output$maintable <- DT::renderDataTable({
+    
+    ## Create a copy of the reactive data
+    DT <- vals$Data
+    
+    ## Create html for checkboxes into the data data frames, each with a custom id by row number
+    DT[["SELECT"]] <- paste0('<input type="checkbox" name="row_selected" value="Row', 1:nrow(vals$Data),'">')
+    
+    ###Create html/js for custom action buttons in the data frame
+    ## Button has two actions, one for supplying the input value of the row id (view_details),
+    ## and one for observing to trigger the event.  This allows the same button to be clicked 
+    ## twice in a row
+    DT[["VIEW"]] <- paste0('<div class = "btn-group" role = "group" aria-label="Basic example">
+                            <button type = "button" class = "btn btn-default action-button" 
+                              onclick = "Shiny.onInputChange(&quot;view_details&quot;,  this.id);
+                              Shiny.onInputChange(&quot;last_click&quot;,  Math.random())" 
+                              id = button_', 1:nrow(vals$Data),'>View</button>')
+    
+    ## Subsetting: Required initial subset ------
+    
+    ##Set a vector to hold the selected campuses
+    selected_campuses <- input$campus
+    
+    ## If nearby option is selected, selected_campuses is replaced with the corresponding
+    ## combined campus codes for selected_campuses.  Online is removed if included.
+    ## TODO: You can select "nearby" online classes b/c of the WEBG code.  Should be nothing "nearby"
+    ## an online class.
+    if(input$nearby == TRUE) {
+      combine_codes <- unique(DT$COMBINELOC[DT$BUILDINGDESC %in% selected_campuses])
+      selected_campuses <- unique(DT$BUILDINGDESC[DT$COMBINELOC %in% combine_codes])
+      if("Online" %in% selected_campuses) {
+        selected_campuses <- selected_campuses[!selected_campuses %in% "Online"]
+      }
+    }
+    
+    ## Subsets the initial data frame to include the year, term, and campuses
+    ## All online classes in included via the OR statment
+    DT <- DT[DT$YEAR %in% input$year &
+               DT$TERM %in% input$term &
+               DT$BUILDINGDESC %in% selected_campuses |
+               DT$ONLINE == TRUE, ]
+    
+    ### Include online classes
+    ## Online classes removed unless "include online classes" is selected
+    if (!input$online == TRUE) {
+      DT <- DT[DT$BUILDINGDESC %in% selected_campuses, ]
+    }
+    
+    ### Subsetting Splits for optional includes -----
+    ## Data for options that require split/combine, isolated here and rejoined at the bottom
+    
+    ## Split for "Include Keystone Seminars"
+    if (input$keys == TRUE) {
+      DTKEYS <- DT[DT$GCPKEYS, ]
+    }
+    
+    ## Split for "Include Freshman Seminars"
+    if (input$frsh == TRUE) {
+      DTFRSH <- DT[DT$GCPFRSH, ]
+    }
 
-      output$maintable <- DT::renderDataTable({
-            DT <- vals$Data
-            DT[["SELECT"]] <- paste0('<input type="checkbox" name="row_selected" value="Row', 1:nrow(vals$Data),'">')
-            DT[["VIEW"]] <- paste0('
-                                   <div class = "btn-group" role = "group" aria-label="Basic example">
-                                   <button type = "button" 
-                                          class = "btn btn-default action-button" 
-                                          onclick="Shiny.onInputChange(&quot;view_details&quot;,  this.id);
-                                                Shiny.onInputChange(&quot;last_click&quot;,  Math.random())" 
-                                          id = button_', 1:nrow(vals$Data),'>View</button>
-                                   ')
-            
-            ##Required values
-            #Set a vector to hold the selected campuses
-            selected_campuses <- input$campus
-           
-            if(input$nearby == TRUE) {
-                  combine_codes <- unique(DT$COMBINELOC[DT$BUILDINGDESC %in% selected_campuses])
-                  selected_campuses <- unique(DT$BUILDINGDESC[DT$COMBINELOC %in% combine_codes])
-                  if("Online" %in% selected_campuses) {
-                        selected_campuses <- selected_campuses[!selected_campuses %in% "Online"]
-                  }
-                        
-            }
-            
-            DT <- DT[DT$YEAR %in% input$year &
-                  DT$TERM %in% input$term &
-                  DT$BUILDINGDESC %in% selected_campuses |##This OR is problematic, fix
-                  DT$ONLINE == TRUE, ]
-            
-            ##Optional values
-            if (!input$online == TRUE) {
-                  DT <- DT[DT$BUILDINGDESC %in% selected_campuses, ]
-            }
-            
-            #######These are the "include" options, isolated here and rejoined at the bottom
-            if (input$keys == TRUE) {
-                  DTKEYS <- DT[DT$GCPKEYS, ]
-            }
-            
-            if (input$frsh == TRUE) {
-                  DTFRSH <- DT[DT$GCPFRSH, ]
-            }
-            #######
-            
-            if (!is.null(input$department)) {
-                  DT <- DT[DT$DEPTTXT %in% input$department, ]
-            }
-            
-            if (!is.null(input$subject_prefix)) {
-                  DT <- DT[DT$SUBJECT%in% input$subject_prefix, ]
-            }
-            
-            ##GCP Subsetting happens by setting the skill or knowledge column to TRUE based on selected items
-            if (!is.null(input$gcpskills)) {
-                  if("Critical Thinking" %in% input$gcpskills) {
-                        DT$GCPSKILL[DT$CRI] <- TRUE
-                  }
-                  if("Written Communication" %in% input$gcpskills) {
-                        DT$GCPSKILL[DT$WCOM] <- TRUE
-                  }
-                  if("Oral Communication" %in% input$gcpskills) {
-                        DT$GCPSKILL[DT$OCOM] <- TRUE
-                  }
-                  if("Ethical Reasoning" %in% input$gcpskills) {
-                        DT$GCPSKILL[DT$ETH] <- TRUE
-                  }
-                  if("Intercultural Competence" %in% input$gcpskills) {
-                        DT$GCPSKILL[DT$INTC] <- TRUE
-                  }
-                  DT <- DT[DT$GCPSKILL, ]
-            }
-            
-            if (!is.null(input$gcpknowledge)) {
-                  if("Social Systems & Human Behaviors" %in% input$gcpknowledge) {
-                        DT$GCPKNOWLEDGE[DT$SSHB] <- TRUE
-                  }
-                  if("Roots of Cultures" %in% input$gcpknowledge) {
-                        DT$GCPKNOWLEDGE[DT$ROC] <- TRUE
-                  }
-                  if("Global Understaning" %in% input$gcpknowledge) {
-                        DT$GCPKNOWLEDGE[DT$GLBL] <- TRUE
-                  }
-                  if("Physical & Natural World" %in% input$gcpknowledge) {
-                        DT$GCPKNOWLEDGE[DT$PNW] <- TRUE
-                  }
-                  if("Arts Appreciation" %in% input$gcpknowledge) {
-                        DT$GCPKNOWLEDGE[DT$ARTS] <- TRUE
-                  }
-                  if("Quantitative Literacy" %in% input$gcpknowledge) {
-                        DT$GCPKNOWLEDGE[DT$QL] <- TRUE
-                  }
-                  DT <- DT[DT$GCPKNOWLEDGE, ]
-            }
-            
-            ## Search box functionality
-            index <- grepl(pattern = input$searchText, x = DT$COTITLE, ignore.case = TRUE)
-            DT <- DT[index, ]
-            
-            ## Rejoin Includes
-            if (input$keys == TRUE) {
-                  DT <- unique(rbind(DT, DTKEYS)) ## Does this result in duplicate KEYS?
-            }
-            
-            if (input$frsh == TRUE) {
-                  DT <- unique(rbind(DT, DTFRSH))##Does this result in duplicate KEYS?
-            }
+    ## Subsetting: program/dept/subject -----
+    
+    ## Subset by department
+    if (!is.null(input$department)) {
+      DT <- DT[DT$DEPTTXT %in% input$department, ]
+    }
+    
+    ## Subset by course prefix
+    if (!is.null(input$subject_prefix)) {
+      DT <- DT[DT$SUBJECT%in% input$subject_prefix, ]
+    }
+    
+    ### Subsetting: Global Citizenship Program -----
+    ## GCP Subsetting happens by setting the GCPSKILL or GCPKNOWLEDGE column to TRUE 
+    ## based on selected items
+    
+    ##Set GCPSKILL then subset by it
+    if (!is.null(input$gcpskills)) {
+      if("Critical Thinking" %in% input$gcpskills) {
+        DT$GCPSKILL[DT$CRI] <- TRUE
+      }
+      if("Written Communication" %in% input$gcpskills) {
+        DT$GCPSKILL[DT$WCOM] <- TRUE
+      }
+      if("Oral Communication" %in% input$gcpskills) {
+        DT$GCPSKILL[DT$OCOM] <- TRUE
+      }
+      if("Ethical Reasoning" %in% input$gcpskills) {
+        DT$GCPSKILL[DT$ETH] <- TRUE
+      }
+      if("Intercultural Competence" %in% input$gcpskills) {
+        DT$GCPSKILL[DT$INTC] <- TRUE
+      }
+      DT <- DT[DT$GCPSKILL, ]
+    }
+    
+    ##Set GCPKNOWLEDGE then subset by it
+    if (!is.null(input$gcpknowledge)) {
+      if("Social Systems & Human Behaviors" %in% input$gcpknowledge) {
+        DT$GCPKNOWLEDGE[DT$SSHB] <- TRUE
+      }
+      if("Roots of Cultures" %in% input$gcpknowledge) {
+        DT$GCPKNOWLEDGE[DT$ROC] <- TRUE
+      }
+      if("Global Understaning" %in% input$gcpknowledge) {
+        DT$GCPKNOWLEDGE[DT$GLBL] <- TRUE
+      }
+      if("Physical & Natural World" %in% input$gcpknowledge) {
+        DT$GCPKNOWLEDGE[DT$PNW] <- TRUE
+      }
+      if("Arts Appreciation" %in% input$gcpknowledge) {
+        DT$GCPKNOWLEDGE[DT$ARTS] <- TRUE
+      }
+      if("Quantitative Literacy" %in% input$gcpknowledge) {
+        DT$GCPKNOWLEDGE[DT$QL] <- TRUE
+      }
+      DT <- DT[DT$GCPKNOWLEDGE, ]
+    }
+    
+    ### Subsetting: Date/Time -----
+    
+    ### Subsetting: Keyword search-----
+    
+    DT <- DT[grepl(pattern = input$searchText, x = DT$DESC_CLEAN, ignore.case = TRUE), ]
+    
+    ### Subsetting Combines for optional includes -----
+    
+    ##Rejoin Keystone Seminar
+    if (input$keys == TRUE) {
+      DT <- unique(rbind(DT, DTKEYS)) ## Does this result in duplicate KEYS?
+    }
+    
+    ##Rejoin FRSH Seminar
+    if (input$frsh == TRUE) {
+      DT <- unique(rbind(DT, DTFRSH))##Does this result in duplicate KEYS?
+    }
+    
+    ## Post-Subsetting: Clean up before DT creation -----
+    DT <- DT[, cols]
+    
+    ### Post-Subsetting: DT creation -----
+    ## Use the DT package to turn the data fram into a a JS table 
+    DT::datatable(DT, escape = FALSE, 
+                  rownames = FALSE,
+                  select = "none",
+                  colnames = cols,
+                  extensions = c('ColReorder', 'Responsive'),
+                  options = list(sDom  = '<"top">lrt<"bottom">ip',
+                                 colReorder = list(realtime = FALSE))
+    )
+  })
+  
+  ## Planner Table: UI and Subsetting -----
+  output$plannertable <- DT::renderDataTable({
+    
+    ## Create another copy of the reactive data
+    DTplan <- vals$Data
+    
+    ###Same additions as the Main Table
+    ## TODO: Move the creation of these columns into a function
+    ## Create html for checkboxes into the data data frames, each with a custom id by row number
+    DTplan[["SELECT"]] <- paste0('<input type="checkbox" name="row_selected" value="Row', 1:nrow(vals$Data),'">')
+    
+    ###Create html/js for custom action buttons in the data frame
+    ## Button has two actions, one for supplying the input value of the row id (view_details),
+    ## and one for observing to trigger the event.  This allows the same button to be clicked 
+    ## twice in a row
+    DTplan[["VIEW"]] <- paste0('<div class = "btn-group" role = "group" aria-label="Basic example">
+                           <button type = "button" class = "btn btn-default action-button" 
+                           onclick = "Shiny.onInputChange(&quot;view_details&quot;,  this.id);
+                           Shiny.onInputChange(&quot;last_click&quot;,  Math.random())" 
+                           id = button_', 1:nrow(vals$Data),'>View</button>')
+    
+    ##Subset the Planner table to only the items marked as being in the planner
+    DTplan <- DTplan[DTplan$PLANNER == TRUE, ]
+    
+    ##Trim to include only the colums we want in the DT
+    DTplan <- DTplan[, cols]
 
-            DT::datatable(DT, escape = FALSE, 
-                          rownames = FALSE,
-                          select = "none",
-                          colnames = cols,
-                          extensions = c('ColReorder', 'Responsive'),
-                          options = list(sDom  = '<"top">lrt<"bottom">ip',
-                                         colReorder = list(realtime = FALSE))
-                          ) %>% formatStyle(columns = "stat", 
-                                            target = "row", 
-                                            backgroundColor = styleEqual(c("C", "X"), 
-                                                                         c("yellow", "red")
-                                                                         )
-                                            )
-      })
-      
-      output$plannertable <- DT::renderDataTable({
-            DTplan <- vals$Data
-            DTplan[["SELECT"]] <- paste0('<input type="checkbox" name="row_selected" value="Row', 1:nrow(vals$Data),'">')
-            DTplan[["VIEW"]] <- paste0('
-                                    <div class = "btn-group" role = "group" aria-label="Basic example">
-                                    <button type = "button" class = "btn btn-default action-button\" onclick=\"Shiny.onInputChange(&quot;view_details&quot;,  this.id)\" id = button_', 1:nrow(vals$Data),'>View</button>
-                                    ')
-            
-            DTplan <- DTplan[DTplan$PLANNER == TRUE, ]
-            
-            DTplanview <- DTplan[, cols]##Trim to include only the colums we want in the DT
-            colnames(DTplanview) <- names(cols)
-             
-            DT::datatable(DTplanview, escape = FALSE, select = "none",
-                          extensions = 'Buttons', options = list(dom = 'Bfrtip', 
-                                                                 buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
-                                                                 )
-                          )
-      })
-      
-      # observeEvent(input$view_details, {
-      #       selected_row <- as.numeric(strsplit(input$view_details, "_")[[1]][2])
-      #       section_data <- vals$Data[selected_row, ]
-      #       
-      #       msg <- paste(section_data$COURSECODE, section_data$YEAR, section_data$TERM, "is taught by", section_data$Name, "at", section_data$SECLOC)
-      #       showModal(modalDialog(
-      #             title = "Important message",
-      #             msg,
-      #             easyClose = TRUE
-      #       ))
-      # })
-      
-      observeEvent(input$view_details, {
-            selected_row <- as.numeric(strsplit(input$view_details, "_")[[1]][2])
-            section_data <- vals$Data[selected_row, ]
-            
-            title <- paste(section_data$COTITLE, "-", 
-                           section_data$COURSECODE, 
-                           section_data$YEAR, 
-                           section_data$TERM
-                           )
-            
-            concourseid <- paste(section_data$YEAR, section_data$TERM, 
-                                 section_data$SUBJECT, section_data$COURSENO, 
-                                 section_data$SECNO, sep = "_")
-            concourse_url <- paste0("https://api.apidapter.com/v0/websterfdc/concourse_linker_1?course=", concourseid)
-            concourse_url <- a("Click to View Syllabus in Concourse.", target = "_blank", href = concourse_url)
-            
-            msg <- HTML(
-                        paste(
-                              p(paste("Location:", section_data$BUILDINGDESC)),
-                              p(paste("Instructor:", section_data$Name)),
-                              p(concourse_url), 
-                              p(paste("Description:", section_data$DESC)),
-                              p(paste("Notes:", section_data$ATTS))
-                        )
+    DT::datatable(DTplan, escape = FALSE, 
+                  select = "none",
+                  colnames = cols,
+                  extensions = 'Buttons', 
+                  options = list(dom = 'Bfrtip', 
+                                 buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
                   )
-            #msg <- paste(section_data$COURSENO, section_data$YEAR, section_data$TERM, "is taught by", section_data$Name, "at", section_data$SECLOC)
-            
-            showModal(modalDialog(
-                  title = title,
-                  msg,
-                  easyClose = TRUE
-                  ))
-      })
-      
-      observeEvent(input$last_click, {
-            ##This is a secondary action on the view button
-            ##how can we use it to allow someone to view twice in a row
-            selected_row <- as.numeric(input$last_click)
-      })
-      
-      observeEvent(input$Add_to_planner,{
-            row_to_add <- as.numeric(gsub("Row","",input$checked_rows))
-            vals$Data$PLANNER[row_to_add] <- TRUE
-      })
-      
-      observeEvent(input$keyword_search,{
-      })
-      
-      observeEvent(input$Remove_from_planner,{
-            row_to_add <- as.numeric(gsub("Row","",input$checked_rows))
-            vals$Data$PLANNER[row_to_add] <- FALSE
-      })
+    )
+  })
+  
+  ### Observe Event: View Details Modal -----
+  observeEvent(input$last_click, {
+    
+    ##Extract the row number from the javascript onclick
+    selected_row <- as.numeric(strsplit(input$view_details, "_")[[1]][2])
+    
+    ##Isolate the data for the selected row
+    section_data <- vals$Data[selected_row, ]
+    
+    ### View Details Modal Consruction -----
+    
+    ## Create a title object from fields
+    title <- paste(section_data$COTITLE, "-", 
+                   section_data$COURSECODE, 
+                   section_data$YEAR, 
+                   section_data$TERM
+    )
+    
+    ## Create a Concourse link object
+    concourseid <- paste(section_data$YEAR, section_data$TERM, 
+                         section_data$SUBJECT, section_data$COURSENO, 
+                         section_data$SECNO, sep = "_")
+    concourse_url <- paste0("https://api.apidapter.com/v0/websterfdc/concourse_linker_1?course=", concourseid)
+    concourse_url <- a("Click to View Syllabus in Concourse.", target = "_blank", href = concourse_url)
+    
+    ## Create the HTML object for the modal
+    msg <- HTML(
+      paste(
+        p(paste("Location:", section_data$BUILDINGDESC)),
+        p(paste("Instructor:", section_data$Name)),
+        p(concourse_url), 
+        p(paste("Description:", section_data$DESC)),
+        p(paste("Notes:", section_data$ATTS))
+      )
+    )
+    
+    ## Display the modal
+    showModal(modalDialog(
+      title = title,
+      msg,
+      easyClose = TRUE
+    ))
+  })
+  
+  ### Observe Event: Planner ADD button -----
+  observeEvent(input$Add_to_planner,{
+    row_to_add <- as.numeric(gsub("Row","",input$checked_rows))
+    vals$Data$PLANNER[row_to_add] <- TRUE
+  })
+    
+  ### Observe Event: Planner REMOVE button -----
+  observeEvent(input$Remove_from_planner,{
+    row_to_add <- as.numeric(gsub("Row","",input$checked_rows))
+    vals$Data$PLANNER[row_to_add] <- FALSE
+  })
+  
 })
