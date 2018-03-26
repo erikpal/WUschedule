@@ -19,7 +19,6 @@ data$GCPKEYS <- ifelse(data$SUBJECT == "KEYS", TRUE, FALSE)
 data$GCPFRSH <- ifelse(data$SUBJECT == "FRSH", TRUE, FALSE)
 
 ##Set some variable from the complete available data set
-#selected_row <- NA
 default_terms <- names(defaultTerms())[unlist(defaultTerms())]
 choices_year <- unique(data$YEAR[order(data$YEAR)])
 choices_campus <- unique(data$BUILDINGDESC[order(data$BUILDINGDESC)])
@@ -40,18 +39,17 @@ gcp_knowledge <- c("SSHB" = "Social Systems & Human Behaviors",
                    "QL" = "Quantitative Literacy")
 
 ##Which columns to include in the out DT
-cols <- c("Select" = "SELECT",
-          "View Details" = "VIEW", 
-          "Course Code" = "COURSECODE",
-          "Course Title" = "COTITLE",
-          "Section #" = "SECNO", 
-          "Meeting Days" = "Days", 
-          "Meeting Start Time" = "Beginning Time", 
-          "Meeting End Time" = "Ending Time",
-          "Course Location" = "BUILDINGDESC",
-          "Meeting Type" = "IMDESC",
-          "Instructor Email" = "wuEMAL"
-          )
+cols <- c(
+  " " = "SELECT",
+  "Details" = "VIEW", 
+  "Course" = "COURSENO",
+  "Section" = "SECNO", 
+  "Title" = "COTITLE",
+  "Location" = "BUILDINGDESC",
+  "Meeting Days" = "Days", 
+  "Meeting Time" = "Beginning Time",
+  "Instructor" = "Name"
+)
 
 shinyServer(function(input, output, session) {
   
@@ -116,8 +114,10 @@ shinyServer(function(input, output, session) {
                       multiple = TRUE, 
                       selectize = TRUE
           ),
-          checkboxInput("nearby", label = h5("Include Nearby Campuses")),
-          checkboxInput("online", label = h5("Include Online Classes")),
+          checkboxInput("nearby", label = h5("Include nearby campuses")),
+          checkboxInput("online", label = h5("Include online classes")),
+          #checkboxInput("webnethome", label = h5("Include WebNet+ classes I can take from home")),
+          
           hr(),
           
           ## Sidebar: Optional subsetting details
@@ -148,6 +148,9 @@ shinyServer(function(input, output, session) {
                                   ),
                                   textInput("course_number",
                                             label = "Course Number"
+                                  ),
+                                  textInput("credit_hours",
+                                            label = "# of credit hours"
                                   )
                                 )
           ),
@@ -175,7 +178,9 @@ shinyServer(function(input, output, session) {
           #                                     timeFormat = "%H:%M",
           #                                     ticks = TRUE,
           #                                     step = 300
-          #                         )
+          #                         ),
+          #                       checkboxInput("eveningweekend", 
+          #                                     label = "Limit to evenings and weekends")),
           #                       )
           # ),
           
@@ -207,21 +212,28 @@ shinyServer(function(input, output, session) {
           ## customSBCollapsePanel() is a custom function for making collapsable sidebar menus
           ## Items in customSBCollapsePanel() must be in a tagList()
           customSBCollapsePanel("Keyword Search: ", 
-                                sidebarSearchForm(textId = "searchText", 
-                                                  buttonId = "searchButton",
-                                                  label = "Search")
-          )
+                                tagList(
+                                  sidebarSearchForm(textId = "searchText", 
+                                                    buttonId = "searchButton",
+                                                    label = "Search")
+                                )
+          ),
+          ### Sidebar: Feedback link -----
+          div(class = "under_sidebar_center",
+              actionLink("feedback_link", "Questions? Comments? Issues?"), br(), br()
+              )
         ),
         
         ## Main Panel UI: Settings for main content to right of sidebar -----
         mainPanel(
-          actionButton("Add_to_planner", label = h5("Add to planner")),
-          actionButton("Remove_from_planner", label = h5("Remove from planner")),
+          actionButton("Remove_from_planner", label = "Remove from planner", icon = icon("times")),
+          actionButton("Add_to_planner", label = "Add to planner", icon = icon("plus")),
+          
           tabsetPanel(type = "tabs", 
-                      tabPanel("Full Schedule", class = "one",
+                      tabPanel("Full Schedule", class = "one", icon = icon("calendar"),
                                DT::dataTableOutput("maintable")
                       ),
-                      tabPanel("My Planner", class = "one",
+                      tabPanel("My Planner", class = "one", icon = icon("paperclip"),
                                DT::dataTableOutput("plannertable")
                       )
           )
@@ -270,8 +282,8 @@ shinyServer(function(input, output, session) {
     ## All online classes in included via the OR statment
     DT <- DT[DT$YEAR %in% input$year &
                DT$TERM %in% input$term &
-               DT$BUILDINGDESC %in% selected_campuses |
-               DT$ONLINE == TRUE, ]
+               (DT$BUILDINGDESC %in% selected_campuses |
+               DT$ONLINE == TRUE), ]
     
     ### Include online classes
     ## Online classes removed unless "include online classes" is selected
@@ -450,10 +462,12 @@ shinyServer(function(input, output, session) {
     msg <- HTML(
       paste(
         p(paste("Location:", section_data$BUILDINGDESC)),
+        ##Add the building and room number
         p(paste("Instructor:", section_data$Name)),
-        p(concourse_url), 
+        p(paste("Instructor Email:", section_data$wuEMAL)),
         p(paste("Description:", section_data$DESC)),
-        p(paste("Notes:", section_data$ATTS))
+        p(section_data$ATTS),
+        p(concourse_url)
       )
     )
     
@@ -475,6 +489,17 @@ shinyServer(function(input, output, session) {
   observeEvent(input$Remove_from_planner,{
     row_to_add <- as.numeric(gsub("Row","",input$checked_rows))
     vals$Data$PLANNER[row_to_add] <- FALSE
+  })
+  
+  ### Observe Event: Feedback Modal  -----
+  observeEvent(input$feedback_link,{
+    showModal(
+      modalDialog(
+        tags$iframe(src = feedback_url,
+                    width = "100%", height = "400px"), 
+        size = "l"
+      )
+    )
   })
   
 })

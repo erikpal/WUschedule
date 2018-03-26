@@ -43,14 +43,17 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
             ##Remove any courses that do not have any of the required variables
             x <- x[!x$SECLOC == "",]
             x <- x[!x$TERM == "",]
-            ##NOTE: Year is coming from the original query, so it is excluded
 
             ##Make a column to index online classes
             x$ONLINE <- grepl("Online", x$IMDESC)
             x$WEBNET <- grepl("WebNet", x$IMDESC)
             
-            ##Recode BUILDINGDESC to say Online
+            x$WEBNETHOME <- x[x$WEBNET == TRUE & x$ONLINE == TRUE]
+            
+            ##Recode BUILDINGDESC and COMBLOC to say Online
             x$BUILDINGDESC[x$ONLINE] <- "Online"
+            x$COMBINELOC[x$ONLINE] <- "Online"
+            
             
             x$STATUS <- ifelse(x$stat %in% c("X", "I"), "Canceled", "Open")
             
@@ -102,19 +105,26 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
       return(x)
 }
 
+### Determine if term is active for potential registration ------
+## For each term code, determine if the date is n days before
+## registration opens through the start of the session to be
+## default selection
 defaultTerms <- function() {
+      
+      ndays <- 14 
+  
       default_terms <- list()
       
       default_terms$SU <- ifelse(
             as.integer(format(Sys.Date(), "%j")) >= 
-                  as.integer(format(as.Date("2017-02-28"), "%j")) - 14 &&
+                  as.integer(format(as.Date("2017-02-28"), "%j")) - ndays &&
                   as.integer(format(Sys.Date(), "%j")) <
                   as.integer(format(as.Date("2017-06-16"), "%j")),
             TRUE, FALSE)
       
       default_terms$FA <- ifelse(
             as.integer(format(Sys.Date(), "%j")) >= 
-                  as.integer(format(as.Date("2017-04-03"), "%j")) - 14 &&
+                  as.integer(format(as.Date("2017-04-03"), "%j")) - ndays &&
             as.integer(format(Sys.Date(), "%j")) <
                   as.integer(format(as.Date("2017-09-08"), "%j")),
             TRUE, FALSE)
@@ -123,14 +133,14 @@ defaultTerms <- function() {
       
       default_terms$F2 <- ifelse(
             as.integer(format(Sys.Date(), "%j")) >= 
-                  as.integer(format(as.Date("2017-04-03"), "%j")) - 14 &&
+                  as.integer(format(as.Date("2017-04-03"), "%j")) - ndays &&
                   as.integer(format(Sys.Date(), "%j")) <
                   as.integer(format(as.Date("2017-11-10"), "%j")),
             TRUE, FALSE)
       
       default_terms$SP <- ifelse(
             as.integer(format(Sys.Date(), "%j")) >= 
-                  as.integer(format(as.Date("2017-11-06"), "%j")) - 14 &&
+                  as.integer(format(as.Date("2017-11-06"), "%j")) - ndays &&
             as.integer(format(Sys.Date(), "%j")) < 366 ||
             as.integer(format(Sys.Date(), "%j")) + 366 <
                   as.integer(format(as.Date("2018-01-26"), "%j")) + 366,
@@ -140,7 +150,7 @@ defaultTerms <- function() {
       
       default_terms$S2 <- ifelse(
             as.integer(format(Sys.Date(), "%j")) >= 
-                  as.integer(format(as.Date("2017-11-06"), "%j")) - 14 &&
+                  as.integer(format(as.Date("2017-11-06"), "%j")) - ndays &&
                   as.integer(format(Sys.Date(), "%j")) < 366 ||
                   as.integer(format(Sys.Date(), "%j")) + 366 <
                   as.integer(format(as.Date("2018-03-30"), "%j")) + 366,

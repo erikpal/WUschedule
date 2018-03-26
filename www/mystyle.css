@@ -70,6 +70,10 @@ th {
   float: right; 
 }
 
+.under_sidebar_center{ 
+    margin: auto;
+     width: 220px;
+}
 
 /*
 td {
