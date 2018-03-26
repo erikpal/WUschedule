@@ -11,6 +11,7 @@ source("01-Configs.R")
 data <- loadFrame(schedule_data_path)
 
 ##Create new colummns
+data$STATUS <- as.character(data$stat)
 data$VIEW <- ""
 data$PLANNER <- FALSE
 data$GCPSKILL <- FALSE
@@ -41,8 +42,9 @@ gcp_knowledge <- c("SSHB" = "Social Systems & Human Behaviors",
 ##Which columns to include in the out DT
 cols <- c(
   " " = "SELECT",
+  "Status" = "STATUS",
   "Details" = "VIEW", 
-  "Course" = "COURSENO",
+  "Course" = "COURSECODE",
   "Section" = "SECNO", 
   "Title" = "COTITLE",
   "Location" = "BUILDINGDESC",
@@ -251,6 +253,13 @@ shinyServer(function(input, output, session) {
     ## Create html for checkboxes into the data data frames, each with a custom id by row number
     DT[["SELECT"]] <- paste0('<input type="checkbox" name="row_selected" value="Row', 1:nrow(vals$Data),'">')
     
+    ## Create symbols for course status (cancelled, full, etc.)
+    DT$STATUS[DT$stat == "O"] <- paste0(label = "Open ", icon("unlock"))
+    DT$STATUS[DT$stat == "R"] <- paste0(label = "Open ", icon("unlock"))
+    DT$STATUS[DT$stat == "C"] <- paste0(label = "Closed ", icon("lock"))
+    DT$STATUS[DT$stat == "I"] <- paste0(label = "Cancelled ", icon("remove"))
+    DT$STATUS[DT$stat == "X"] <- paste0(label = "Cancelled ", icon("remove"))  
+    
     ###Create html/js for custom action buttons in the data frame
     ## Button has two actions, one for supplying the input value of the row id (view_details),
     ## and one for observing to trigger the event.  This allows the same button to be clicked 
@@ -406,6 +415,13 @@ shinyServer(function(input, output, session) {
     ## TODO: Move the creation of these columns into a function
     ## Create html for checkboxes into the data data frames, each with a custom id by row number
     DTplan[["SELECT"]] <- paste0('<input type="checkbox" name="row_selected" value="Row', 1:nrow(vals$Data),'">')
+    
+    ## Create symbols for course status (cancelled, full, etc.)
+    DTplan$STATUS[DTplan$stat == "O"] <- paste0(label = "Open ", icon("unlock"))
+    DTplan$STATUS[DTplan$stat == "R"] <- paste0(label = "Open ", icon("unlock"))
+    DTplan$STATUS[DTplan$stat == "C"] <- paste0(label = "Closed ", icon("lock"))
+    DTplan$STATUS[DTplan$stat == "I"] <- paste0(label = "Cancelled ", icon("remove"))
+    DTplan$STATUS[DTplan$stat == "X"] <- paste0(label = "Cancelled ", icon("remove"))  
     
     ###Create html/js for custom action buttons in the data frame
     ## Button has two actions, one for supplying the input value of the row id (view_details),
