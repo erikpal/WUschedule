@@ -25,6 +25,7 @@ choices_year <- unique(data$YEAR[order(data$YEAR)])
 choices_campus <- unique(data$BUILDINGDESC[order(data$BUILDINGDESC)])
 choices_department <- unique(data$DEPTTXT[order(data$DEPTTXT)])
 choices_prefix <- unique(data$SUBJECT[order(data$SUBJECT)])
+choices_credithour <- unique(as.numeric(data$SECHOURS[order(data$SECHOURS)]))
 
 gcp_skills <- c("CRI" = "Critical Thinking",
                 "ETH" = "Ethical Reasoning",
@@ -151,9 +152,16 @@ shinyServer(function(input, output, session) {
                                   textInput("course_number",
                                             label = "Course Number"
                                   ),
-                                  textInput("credit_hours",
-                                            label = "# of credit hours"
+                                  sliderInput(
+                                    "credit_hour",
+                                    label = "# of Credit Hours",
+                                    min = min(choices_credithour), 
+                                    max = max(choices_credithour),
+                                    value = c(min(choices_credithour), 
+                                              max(choices_credithour)
+                                              )
                                   )
+
                                 )
           ),
           
@@ -325,6 +333,9 @@ shinyServer(function(input, output, session) {
       DT <- DT[DT$SUBJECT%in% input$subject_prefix, ]
     }
     
+    DT <- DT[DT$SECHOURS >= input$credit_hour[1] &
+               DT$SECHOURS <= input$credit_hour[2], ]
+    
     ### Subsetting: Global Citizenship Program -----
     ## GCP Subsetting happens by setting the GCPSKILL or GCPKNOWLEDGE column to TRUE 
     ## based on selected items
@@ -392,6 +403,9 @@ shinyServer(function(input, output, session) {
     
     ## Post-Subsetting: Clean up before DT creation -----
     DT <- DT[, cols]
+    
+    ## Post-Subsetting: Sort -----
+    DT <- DT %>% arrange(desc(STATUS), SECNO, COURSECODE)
     
     ### Post-Subsetting: DT creation -----
     ## Use the DT package to turn the data fram into a a JS table 

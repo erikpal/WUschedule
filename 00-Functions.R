@@ -33,6 +33,8 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
             
             x$TERM <- as.character(x$`Term Code`)
             x$YEAR <- as.integer(as.character(x$`Calendar Year - Section`))
+            x$SECHOURS <- as.integer(x$`Section Hours`)
+            
             
             x$SUBJECT <- gsub("(\\D{3,4}) (\\d{4})", "\\1", x$COURSECODE)
             x$COURSENO <- gsub("(\\D{3,4}) (\\d{4})", "\\2", x$COURSECODE)
@@ -48,7 +50,7 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
             x$ONLINE <- grepl("Online", x$IMDESC)
             x$WEBNET <- grepl("WebNet", x$IMDESC)
             
-            x$WEBNETHOME <- x[x$WEBNET == TRUE & x$ONLINE == TRUE]
+            #x$WEBNETHOME <- x[x$WEBNET == TRUE & x$ONLINE == TRUE]
             
             ##Recode BUILDINGDESC and COMBLOC to say Online
             x$BUILDINGDESC[x$ONLINE] <- "Online"
