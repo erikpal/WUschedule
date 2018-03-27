@@ -30,6 +30,8 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
             x$COURSECODE <- as.character(x$`Course Number`)
             x$SECNO <- as.character(x$`Section Number Code`)
             x$IMDESC <- as.character(x$`IM Description`)
+            x$PROGRAM <- as.character(x$PROGRAM)
+            
             
             x$TERM <- as.character(x$`Term Code`)
             x$YEAR <- as.integer(as.character(x$`Calendar Year - Section`))

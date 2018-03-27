@@ -137,12 +137,6 @@ shinyServer(function(input, output, session) {
                                               multiple = TRUE,
                                               selectize = TRUE
                                   ),
-                                  selectInput(inputId = "program_level",
-                                              label = "Program Level",
-                                              choices = c("GRAD", "UNDG"),
-                                              multiple = TRUE,
-                                              selectize = TRUE
-                                  ),
                                   selectInput(inputId = "subject_prefix",
                                               label = "Subject",
                                               choices = choices_prefix,
@@ -150,7 +144,16 @@ shinyServer(function(input, output, session) {
                                               selectize = TRUE
                                   ),
                                   textInput("course_number",
-                                            label = "Course Number"
+                                            label = "Course Code",
+                                            placeholder = "ABCD 1234"
+                                  ),
+                                  checkboxGroupInput(
+                                    "program_level",
+                                    label = "Program Level",
+                                    choices = c("Undergraduate" = "UNDG",
+                                                "Graduate" = "GRAD"),
+                                    selected = c("UNDG", "GRAD"),
+                                    inline = TRUE
                                   ),
                                   sliderInput(
                                     "credit_hour",
@@ -330,9 +333,18 @@ shinyServer(function(input, output, session) {
     
     ## Subset by course prefix
     if (!is.null(input$subject_prefix)) {
-      DT <- DT[DT$SUBJECT%in% input$subject_prefix, ]
+      DT <- DT[DT$SUBJECT %in% input$subject_prefix, ]
     }
     
+    ## Subset by program level
+    if (!identical(input$program_level, c("UNDG", "GRAD"))) {
+      DT <- DT[DT$PROGRAM %in% input$program_level, ]
+    }
+    
+    ## Subset by course number search
+    DT <- DT[grepl(pattern = input$course_number, x = DT$COURSECODE, ignore.case = TRUE), ]
+    
+    ## Subset by credit hours
     DT <- DT[DT$SECHOURS >= input$credit_hour[1] &
                DT$SECHOURS <= input$credit_hour[2], ]
     
