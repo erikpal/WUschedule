@@ -11,7 +11,6 @@ source("01-Configs.R")
 data <- loadFrame(schedule_data_path)
 
 ##Create new colummns
-data$STATUS <- as.character(data$stat)
 data$VIEW <- ""
 data$PLANNER <- FALSE
 data$CREDITS <- data$`Section Hours`
@@ -19,6 +18,7 @@ data$GCPSKILL <- FALSE
 data$GCPKNOWLEDGE <- FALSE
 data$GCPKEYS <- ifelse(data$SUBJECT == "KEYS", TRUE, FALSE)
 data$GCPFRSH <- ifelse(data$SUBJECT == "FRSH", TRUE, FALSE)
+data$STATUS <- as.character(data$stat)
 
 ##Set some variable from the complete available data set
 #default_terms <- names(defaultTerms())[unlist(defaultTerms())] # Deprecated
@@ -44,16 +44,16 @@ gcp_knowledge <- c("SSHB" = "Social Systems & Human Behaviors",
 ##Which columns to include in the out DT
 cols <- c(
   " " = "SELECT",
-  "Status" = "STATUS",
   "Details" = "VIEW", 
+  "Title" = "COTITLE",
   "Course" = "COURSECODE",
   "Section" = "SECNO", 
   "Credit Hours" = "CREDITS",
-  "Title" = "COTITLE",
   "Location" = "BUILDINGDESC",
   "Meeting Days" = "Days", 
   "Meeting Time" = "Beginning Time",
-  "Instructor" = "Name"
+  "Instructor" = "Name",
+  "Status" = "STATUS"
 )
 
 shinyServer(function(input, output, session) {
@@ -85,10 +85,11 @@ shinyServer(function(input, output, session) {
       
       # Page Title
       title = "Course Schedule",
-      br(), br(), br(), br(), br(), 
-      br(), br(), br(), br(), 
-      tags$h2(HTML("<center>Course Schedules</center>")),
-      br(),
+      HTML("<center>"),
+      img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo"), 
+      br(), 
+      tags$h2("Course Schedules"),
+      HTML("</center>"),
       
       ## Sidebar UI: Settings for left-side sidebar -----
       sidebarLayout(

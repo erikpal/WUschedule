@@ -1,12 +1,11 @@
 body {
-        background-image: url("http://www.webster.edu/images/globalmarketingcommunications/logo-downloads/logo_color_pms_280_136.jpg");
-        background-size: 20%;        
+        /*
+        background-image: url(); 
+        */
+        background-size: 15%;
         background-repeat: no-repeat;
         height: 100vh;
         background-position: top;
-        /*
-        background-color: #004990;
-        */
         background-color: #ffffff;
         color: #B7B9BC;
         color: #000000;       
@@ -14,13 +13,9 @@ body {
 }
 
 img { 
-    width:100%; 
+    width: 15%; 
+    height: auto;
 }
-/*
-p {
-        color:#FFFFFF;
-}
-*/
 
 h2 {
         font-family: 'Georgia', sans-serif;
@@ -75,12 +70,7 @@ th {
      width: 220px;
 }
 
-/*
-td {
-    background-color: #FFFFFF;
-    color: #004990;
-}
-*/
+
 
 
 
