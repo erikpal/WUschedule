@@ -21,7 +21,7 @@ data$GCPKEYS <- ifelse(data$SUBJECT == "KEYS", TRUE, FALSE)
 data$GCPFRSH <- ifelse(data$SUBJECT == "FRSH", TRUE, FALSE)
 
 ##Set some variable from the complete available data set
-default_terms <- names(defaultTerms())[unlist(defaultTerms())]
+#default_terms <- names(defaultTerms())[unlist(defaultTerms())] # Deprecated
 choices_year <- unique(data$YEAR[order(data$YEAR)])
 choices_campus <- unique(data$BUILDINGDESC[order(data$BUILDINGDESC)])
 choices_department <- unique(data$DEPTTXT[order(data$DEPTTXT)])
@@ -98,7 +98,7 @@ shinyServer(function(input, output, session) {
           h2("Search by: "), br(), br(),
           checkboxGroupInput("year", "Year",
                              choices = choices_year,
-                             selected = defaultYear(),
+                             #selected = defaultYear(), # Deprecated
                              inline = TRUE
           ),
           selectInput("term", "Session",
@@ -109,7 +109,7 @@ shinyServer(function(input, output, session) {
                                   "Fall Semester" = "FA",
                                   "Fall Term 1" = "F1",
                                   "Fall Term 2" = "F2"),
-                      selected = default_terms,
+                      #selected = default_terms, # Deprecated
                       multiple = TRUE,
                       selectize = TRUE
           ),
@@ -338,13 +338,11 @@ shinyServer(function(input, output, session) {
       DT <- DT[DT$SUBJECT %in% input$subject_prefix, ]
     }
     
-<<<<<<< HEAD
     ## Subset by credit hours
     if (!is.null(input$credit_hours)) {
       DT <- DT[DT$CREDITS %in% input$credit_hours, ]
     }
     
-=======
     ## Subset by program level
     if (!identical(input$program_level, c("UNDG", "GRAD"))) {
       DT <- DT[DT$PROGRAM %in% input$program_level, ]
@@ -356,8 +354,7 @@ shinyServer(function(input, output, session) {
     ## Subset by credit hours
     DT <- DT[DT$SECHOURS >= input$credit_hour[1] &
                DT$SECHOURS <= input$credit_hour[2], ]
->>>>>>> 9848420713800cfb218dfadabd5db16280d438f8
-    
+
     ### Subsetting: Global Citizenship Program -----
     ## GCP Subsetting happens by setting the GCPSKILL or GCPKNOWLEDGE column to TRUE 
     ## based on selected items
