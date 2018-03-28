@@ -35,7 +35,7 @@ loadFrame <- function(path = "./schedule_frame.RDS", update = FALSE) {
             
             x$TERM <- as.character(x$`Term Code`)
             x$YEAR <- as.integer(as.character(x$`Calendar Year - Section`))
-            x$SECHOURS <- as.integer(x$`Section Hours`)
+            x$SECHOURS <- as.integer(as.character(x$`Section Hours`))
             
             
             x$SUBJECT <- gsub("(\\D{3,4}) (\\d{4})", "\\1", x$COURSECODE)
