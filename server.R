@@ -338,13 +338,11 @@ shinyServer(function(input, output, session) {
       DT <- DT[DT$SUBJECT %in% input$subject_prefix, ]
     }
     
-<<<<<<< HEAD
     ## Subset by credit hours
     if (!is.null(input$credit_hours)) {
       DT <- DT[DT$CREDITS %in% input$credit_hours, ]
     }
     
-=======
     ## Subset by program level
     if (!identical(input$program_level, c("UNDG", "GRAD"))) {
       DT <- DT[DT$PROGRAM %in% input$program_level, ]
@@ -356,8 +354,7 @@ shinyServer(function(input, output, session) {
     ## Subset by credit hours
     DT <- DT[DT$SECHOURS >= input$credit_hour[1] &
                DT$SECHOURS <= input$credit_hour[2], ]
->>>>>>> 9848420713800cfb218dfadabd5db16280d438f8
-    
+
     ### Subsetting: Global Citizenship Program -----
     ## GCP Subsetting happens by setting the GCPSKILL or GCPKNOWLEDGE column to TRUE 
     ## based on selected items
