@@ -14,6 +14,7 @@ data <- loadFrame(schedule_data_path)
 data$STATUS <- as.character(data$stat)
 data$VIEW <- ""
 data$PLANNER <- FALSE
+data$CREDITS <- data$`Section Hours`
 data$GCPSKILL <- FALSE
 data$GCPKNOWLEDGE <- FALSE
 data$GCPKEYS <- ifelse(data$SUBJECT == "KEYS", TRUE, FALSE)
@@ -46,6 +47,7 @@ cols <- c(
   "Details" = "VIEW", 
   "Course" = "COURSECODE",
   "Section" = "SECNO", 
+  "Credit Hours" = "CREDITS",
   "Title" = "COTITLE",
   "Location" = "BUILDINGDESC",
   "Meeting Days" = "Days", 
@@ -325,6 +327,12 @@ shinyServer(function(input, output, session) {
       DT <- DT[DT$SUBJECT%in% input$subject_prefix, ]
     }
     
+    ## Subset by credit hours
+    if (!is.null(input$credit_hours)) {
+      DT <- DT[DT$CREDITS %in% input$credit_hours, ]
+    }
+    
+    
     ### Subsetting: Global Citizenship Program -----
     ## GCP Subsetting happens by setting the GCPSKILL or GCPKNOWLEDGE column to TRUE 
     ## based on selected items
@@ -375,7 +383,7 @@ shinyServer(function(input, output, session) {
     ### Subsetting: Date/Time -----
     
     ### Subsetting: Keyword search-----
-    
+  
     DT <- DT[grepl(pattern = input$searchText, x = DT$DESC_CLEAN, ignore.case = TRUE), ]
     
     ### Subsetting Combines for optional includes -----
