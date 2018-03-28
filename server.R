@@ -85,9 +85,9 @@ shinyServer(function(input, output, session) {
       
       # Page Title
       title = "Course Schedule",
-      HTML("<center>"),
-      img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo"), 
       br(), 
+      img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo"), 
+      HTML("<center>"),
       tags$h2("Course Schedules"),
       HTML("</center>"),
       
