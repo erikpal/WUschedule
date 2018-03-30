@@ -2,7 +2,10 @@ library(shiny)
 library(DT)
 library(shinythemes)
 library(shinydashboard)
+<<<<<<< HEAD
 library(dplyr)
+=======
+>>>>>>> 13a8bd14b1aa6f5f7d6325f8099ccbd766165396
 source("00-Functions.R")
 source("01-Configs.R")
 
