@@ -84,10 +84,11 @@ shinyServer(function(input, output, session) {
       # Page Title
       title = "Course Schedule",
       br(), 
-      HTML("<center>"),
-      tags$h2("Course Schedules"),
-      HTML("</center>"),
-      
+      div(align = "center", 
+          h2("Course Schedules")
+          ),
+      br(),
+
       ## Sidebar UI: Settings for left-side sidebar -----
       sidebarLayout(
         sidebarPanel(
@@ -235,9 +236,10 @@ shinyServer(function(input, output, session) {
           ### Sidebar: Feedback link -----
           div(class = "under_sidebar_center",
               actionLink("feedback_link", "Questions? Comments? Issues?"), br(), 
-              HTML("<center>"),
-              h6("v 0.1.0 - The Lorettine"), 
-              HTML("</center>"), br()
+              div(align = "center",
+                h6("v0.1.0")
+              ),
+              br()
               )
         ),
         
@@ -434,9 +436,8 @@ shinyServer(function(input, output, session) {
                   rownames = FALSE,
                   select = "none",
                   colnames = cols,
-                  extensions = c('ColReorder', 'Responsive'),
-                  options = list(sDom  = '<"top">lrt<"bottom">ip',
-                                 colReorder = list(realtime = FALSE))
+                  extensions = c('Responsive'),
+                  options = list(sDom  = '<"top">lrt<"bottom">ip')
     )
   })
   
@@ -474,12 +475,15 @@ shinyServer(function(input, output, session) {
     ##Trim to include only the colums we want in the DT
     DTplan <- DTplan[, cols]
 
-    DT::datatable(DTplan, escape = FALSE, 
+    DT::datatable(DTplan, 
+                  escape = FALSE, 
+                  rownames = FALSE,
                   select = "none",
                   colnames = cols,
-                  extensions = 'Buttons', 
+                  extensions = c('Buttons', 'ColReorder', 'Responsive'),
                   options = list(dom = 'Bfrtip', 
-                                 buttons = c('copy', 'csv', 'excel', 'pdf', 'print')
+                                 buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
+                                 colReorder = list(realtime = FALSE)
                   )
     )
   })
