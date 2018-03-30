@@ -84,7 +84,6 @@ shinyServer(function(input, output, session) {
       # Page Title
       title = "Course Schedule",
       br(), 
-      img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo"), 
       HTML("<center>"),
       tags$h2("Course Schedules"),
       HTML("</center>"),
@@ -215,7 +214,7 @@ shinyServer(function(input, output, session) {
                                                 label = h5("Include Keystone Seminars")
                                   ),
                                   checkboxInput("frsh", 
-                                                label = h5("Include First-year Seminars")
+                                                label = h5("Include First Year Seminars")
                                   ) 
                                 )
           ),
@@ -230,9 +229,15 @@ shinyServer(function(input, output, session) {
                                                     label = "Search")
                                 )
           ),
+          HTML("<center>"),
+          img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo"), br(), br(),
+          HTML("</center>"),
           ### Sidebar: Feedback link -----
           div(class = "under_sidebar_center",
-              actionLink("feedback_link", "Questions? Comments? Issues?"), br(), br()
+              actionLink("feedback_link", "Questions? Comments? Issues?"), br(), 
+              HTML("<center>"),
+              h6("v 0.1.0 - The Lorettine"), 
+              HTML("</center>"), br()
               )
         ),
         
@@ -243,10 +248,10 @@ shinyServer(function(input, output, session) {
           
           tabsetPanel(type = "tabs", 
                       tabPanel("Full Schedule", class = "one", icon = icon("calendar"),
-                               DT::dataTableOutput("maintable")
+                                DT::dataTableOutput("maintable")
                       ),
                       tabPanel("My Planner", class = "one", icon = icon("paperclip"),
-                               DT::dataTableOutput("plannertable")
+                                DT::dataTableOutput("plannertable")
                       )
           )
         )
