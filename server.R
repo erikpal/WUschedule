@@ -2,13 +2,12 @@ library(shiny)
 library(DT)
 library(shinythemes)
 library(shinydashboard)
-#library(shinyBS)
-#library(bsplus)
+library(dplyr)
 source("00-Functions.R")
 source("01-Configs.R")
 
 ##Load the data
-data <- loadFrame(schedule_data_path)
+data <- readRDS(schedule_data_path)
 
 ##Create new colummns
 data$VIEW <- ""
@@ -21,7 +20,6 @@ data$GCPFRSH <- ifelse(data$SUBJECT == "FRSH", TRUE, FALSE)
 data$STATUS <- as.character(data$stat)
 
 ##Set some variable from the complete available data set
-#default_terms <- names(defaultTerms())[unlist(defaultTerms())] # Deprecated
 choices_year <- unique(data$YEAR[order(data$YEAR)])
 choices_campus <- unique(data$BUILDINGDESC[order(data$BUILDINGDESC)])
 choices_department <- unique(data$DEPTTXT[order(data$DEPTTXT)])
@@ -99,7 +97,6 @@ shinyServer(function(input, output, session) {
           h2("Search by: "), br(), br(),
           checkboxGroupInput("year", "Year",
                              choices = choices_year,
-                             #selected = defaultYear(), # Deprecated
                              inline = TRUE
           ),
           selectInput("term", "Session",
@@ -110,7 +107,6 @@ shinyServer(function(input, output, session) {
                                   "Fall Semester" = "FA",
                                   "Fall Term 1" = "F1",
                                   "Fall Term 2" = "F2"),
-                      #selected = default_terms, # Deprecated
                       multiple = TRUE,
                       selectize = TRUE
           ),
