@@ -3,11 +3,13 @@ library(DT)
 library(dplyr)
 library(shinythemes)
 library(shinydashboard)
+library(shinyjs)
 source("00-Functions.R")
 source("01-Configs.R")
 
 ##Load the data
 data <- readRDS(schedule_data_path)
+
 
 ##Create new colummns
 data$VIEW <- ""
@@ -58,11 +60,28 @@ shinyServer(function(input, output, session) {
   
   ## Create reactive values object for data -----
   vals <- reactiveValues("Data" = data)
-
+  
   ## Main Body UI: Contains the reactively generated output of the entire page UI -----
   output$mainbody <- renderUI({
     
     fluidPage(
+
+      ## ADMIN PANEL -----
+      conditionalPanel(
+        condition = "input.admin_panel == true",
+        fixedPanel(
+          top = "15px",
+          right = "15px",
+          width = "100px", 
+          height = "100px",
+          draggable = TRUE,
+          h2("PANEL"),
+          checkboxInput("admin_panel",
+                        label = "Hidden Admin Panel Checkbox",
+                        value = FALSE
+          )
+        )
+      ),
       
       ## Custom JavaScript: DT checkboxes -----
       tags$script(HTML(
@@ -87,6 +106,7 @@ shinyServer(function(input, output, session) {
       div(align = "center", 
           h2("Course Schedules")
           ),
+      h3(session$clientData$url_search),
       br(),
 
       ## Sidebar UI: Settings for left-side sidebar -----
@@ -163,7 +183,6 @@ shinyServer(function(input, output, session) {
                                               max(choices_credithour)
                                               )
                                   )
-
                                 )
           ),
           
@@ -229,10 +248,13 @@ shinyServer(function(input, output, session) {
                                                     buttonId = "searchButton",
                                                     label = "Search")
                                 )
+                                
           ),
-          HTML("<center>"),
-          img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo"), br(), br(),
-          HTML("</center>"),
+
+          div(align = "center",
+            tags$img(src="401px-Webster_University_Logo.svg.png", alt = "Webster University Logo")
+          ), br(),
+          
           ### Sidebar: Feedback link -----
           div(class = "under_sidebar_center",
               actionLink("feedback_link", "Questions? Comments? Issues?"), br(), 
@@ -555,6 +577,21 @@ shinyServer(function(input, output, session) {
         size = "l"
       )
     )
+  })
+  
+  ## Query String: Parse the url query string into usable actions -----
+  
+  observe({
+    query <- parseQueryString(session$clientData$url_search)
+    
+    if (!is.null(query$keys)) {
+      updateCheckboxInput(session, "keys", value = as.logical(query$keys))
+    }
+    
+    if (!is.null(query$admin)) {
+      updateCheckboxInput(session, "admin_panel", value = as.logical(query$admin))
+    }
+    
   })
   
 })
