@@ -120,7 +120,7 @@ shinyServer(function(input, output, session) {
           ),
           checkboxInput("nearby", label = h5("Include nearby campuses")),
           checkboxInput("online", label = h5("Include online classes")),
-          #checkboxInput("webnethome", label = h5("Include WebNet+ classes I can take from home")),
+          checkboxInput("webnetremote", label = h5("Include classes I can join remotely")),
           
           hr(),
           
@@ -333,16 +333,27 @@ shinyServer(function(input, output, session) {
     }
     
     ## Subsets the initial data frame to include the year, term, and campuses
-    ## All online classes in included via the OR statment
+    ## All Remote WebNet+ and Online classes in included via the OR statment
     DT <- DT[DT$YEAR %in% input$year &
                DT$TERM %in% input$term &
                (DT$BUILDINGDESC %in% selected_campuses |
-               DT$ONLINE == TRUE), ]
+               DT$ONLINE == TRUE |
+               DT$WEBNET_REMOTE == TRUE), ]
     
     ### Include online classes
-    ## Online classes removed unless "include online classes" is selected
-    if (!input$online == TRUE) {
-      DT <- DT[DT$BUILDINGDESC %in% selected_campuses, ]
+    ## Online and WebNet+ classes removed unless one of their "includes" is selected
+    if (input$online == FALSE & input$webnetremote == FALSE) {
+        DT <- DT[DT$BUILDINGDESC %in% selected_campuses, ]
+    }
+    
+    ##Remove WebNet+ courses if not seelected
+    if (input$online == TRUE & input$webnetremote == FALSE) {
+      DT <- DT[DT$BUILDINGDESC %in% selected_campuses | DT$ONLINE == TRUE, ]
+    }
+    
+    ##Remove Online courses if not seelected
+    if (input$online == FALSE & input$webnetremote == TRUE) {
+      DT <- DT[DT$BUILDINGDESC %in% selected_campuses | DT$WEBNET_REMOTE == TRUE, ]
     }
     
     ### Subsetting Splits for optional includes -----
@@ -465,7 +476,10 @@ shinyServer(function(input, output, session) {
                   select = "none",
                   colnames = cols,
                   extensions = c('Responsive'),
-                  options = list(sDom  = '<"top">lrt<"bottom">ip')
+                  options = list(sDom  = '<"top">lrt<"bottom">ip',
+                                 language = list(
+                                   zeroRecords = "No courses to display.  Change search options."
+                                 ))
     )
   })
   
@@ -511,7 +525,10 @@ shinyServer(function(input, output, session) {
                   extensions = c('Buttons', 'ColReorder', 'Responsive'),
                   options = list(dom = 'Bfrtip', 
                                  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'),
-                                 colReorder = list(realtime = FALSE)
+                                 colReorder = list(realtime = FALSE),
+                                 language = list(
+                                   zeroRecords = "No courses added to planner."
+                                   )
                   )
     )
   })
