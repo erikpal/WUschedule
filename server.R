@@ -66,23 +66,6 @@ shinyServer(function(input, output, session) {
     
     fluidPage(
 
-      ## ADMIN PANEL -----
-      conditionalPanel(
-        condition = "input.admin_panel == true",
-        fixedPanel(
-          top = "15px",
-          right = "15px",
-          width = "100px", 
-          height = "100px",
-          draggable = TRUE,
-          h2("PANEL"),
-          checkboxInput("admin_panel",
-                        label = "Hidden Admin Panel Checkbox",
-                        value = FALSE
-          )
-        )
-      ),
-      
       ## Custom JavaScript: DT checkboxes -----
       tags$script(HTML(
         '$(document).on("click", "input", function () {
@@ -106,7 +89,6 @@ shinyServer(function(input, output, session) {
       div(align = "center", 
           h2("Course Schedules")
           ),
-      h3(session$clientData$url_search),
       br(),
 
       ## Sidebar UI: Settings for left-side sidebar -----
@@ -277,7 +259,31 @@ shinyServer(function(input, output, session) {
                       tabPanel("My Planner", class = "one", icon = icon("paperclip"),
                                 DT::dataTableOutput("plannertable")
                       )
+          ),
+          
+          ## ADMIN PANEL -----
+          conditionalPanel(
+            condition = "input.admin_panel == true",
+            fixedPanel(
+              bottom = "15px",
+              right = "15px",
+              width = "200px", 
+              height = "150px",
+              draggable = TRUE,
+              div(class = "panel panel-primary",
+                  div(class = "panel-heading", "Admin Panel"),
+                  div(class = "panel-body",
+                      p(Sys.Date()),
+                      p(paste("Data load:", file.info(schedule_data_path)$ctime)),
+                      p(session$clientData$url_search),
+                      checkboxInput("admin_panel",
+                                    label = "Hidden Admin Panel Checkbox",
+                                    value = FALSE)
+                      )
+              )
+            )
           )
+          
         )
       )
     )
