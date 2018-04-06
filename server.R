@@ -6,6 +6,7 @@ library(shinydashboard)
 library(shinyjs)
 source("00-Functions.R")
 source("01-Configs.R")
+source("02-DateAndTime.R")
 
 ##Load the data
 data <- readRDS(schedule_data_path)
@@ -101,7 +102,7 @@ shinyServer(function(input, output, session) {
                              choices = choices_year,
                              inline = TRUE
           ),
-          selectInput("term", "Session",
+          selectInput("term", "Semster/Term",
                       choices = c("Spring Semester" = "SP",
                                   "Spring Term 1" = "S1",
                                   "Spring Term 2" = "S2",
@@ -346,12 +347,12 @@ shinyServer(function(input, output, session) {
         DT <- DT[DT$BUILDINGDESC %in% selected_campuses, ]
     }
     
-    ##Remove WebNet+ courses if not seelected
+    ##Remove WebNet+ courses if not selected
     if (input$online == TRUE & input$webnetremote == FALSE) {
       DT <- DT[DT$BUILDINGDESC %in% selected_campuses | DT$ONLINE == TRUE, ]
     }
     
-    ##Remove Online courses if not seelected
+    ##Remove Online courses if not selected
     if (input$online == FALSE & input$webnetremote == TRUE) {
       DT <- DT[DT$BUILDINGDESC %in% selected_campuses | DT$WEBNET_REMOTE == TRUE, ]
     }
@@ -607,10 +608,89 @@ shinyServer(function(input, output, session) {
   observe({
     query <- parseQueryString(session$clientData$url_search)
     
+    ## Select year
+    if (!is.null(query$year)) {
+      updateCheckboxGroupInput(session, "year", selected = query$year)
+    }
+    
+    ## Select term
+    if (!is.null(query$term)) {
+      updateSelectInput(session, "term", selected = query$term)
+    }
+    
+    ## Select campus
+    if (!is.null(query$campus)) {
+      updateSelectInput(session, "campus", selected = query$campus)
+    }
+    
+    ## Select nearby campuses
+    if (!is.null(query$nearby)) {
+      updateCheckboxInput(session, "nearby", value = as.logical(query$nearby))
+    }
+    
+    ## Select online courses
+    if (!is.null(query$online)) {
+      updateCheckboxInput(session, "online", value = as.logical(query$online))
+    }
+    
+    ## Select Webnet+
+    if (!is.null(query$webnetremote)) {
+      updateCheckboxInput(session, "webnetremote", value = as.logical(query$webnetremote))
+    }
+    
+    ## Select department
+    if (!is.null(query$department)) {
+      updateSelectInput(session, "department", selected = query$department)
+    }
+    
+    ## Select subject
+    if (!is.null(query$subject_prefix)) {
+      updateSelectInput(session, "subject_prefix", selected = query$subject_prefix)
+    }
+    
+    ## Enter course code
+    if (!is.null (query$course_number)) {
+      updateTextInput(session, "course_number", value = query$course_number)
+    }
+    
+    ## Select program level
+    if (!is.null(query$program_level)) {
+      updateCheckboxGroupInput(session, "program_level", selected = query$program_level)
+    }
+    
+    ## Select credit hour range
+    if (!is.null(query$credit_hour)) {
+      updateSliderInput(session, "credit_hour", 
+                        value = query$credit_hour,  
+                        step = 1) 
+    }
+    
+    ## Select skill areas
+    if (!is.null(query$gcpskills)) {
+      updateSelectInput(session, "gcpskills", selected = query$gcpskills)
+    }
+    
+    ## Select knowledge areas
+    if (!is.null(query$gcpknowledge)) {
+      updateSelectInput(session, "gcpknowledge", selected = query$gcpknowledge)
+    }
+    
+    ## Select Keystone courses
     if (!is.null(query$keys)) {
       updateCheckboxInput(session, "keys", value = as.logical(query$keys))
     }
     
+    ## Select First-Year Seminars
+    if (!is.null(query$frsh)) {
+      updateCheckboxInput(session, "frsh", value = as.logical(query$frsh))
+    }
+    
+    ## Enter keyword search
+    if (!is.null(query$searchText)) {
+      updateCheckboxGroupInput(session, "searchText", selected = query$searchText)
+    }
+    
+    ## Open Hidden Admin Panel
     if (!is.null(query$admin)) {
       updateCheckboxInput(session, "admin_panel", value = as.logical(query$admin))
     }
