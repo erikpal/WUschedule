@@ -195,7 +195,7 @@ WU.meeting.days <- function(meetingdays) {
 }
 
 ###Extract all the meeting dates from the provided
-##ISSUE: It looks like in CX many classes in my sample dat in 2017
+##ISSUE: It looks like in CX many classes in my sample data in 2017
 ##have an incorrect end date, which makes the classes one week shorter.
 WU.meeting.dates <- function(startdate, enddate, meetingdays) {
       require(lubridate)

@@ -6,11 +6,25 @@ library(shinydashboard)
 library(shinyjs)
 source("00-Functions.R")
 source("01-Configs.R")
-source("02-DateAndTime.R")
+#source("02-DateAndTime.R")
 
 ##Load the data
 data <- readRDS(schedule_data_path)
 
+##Date and time transformations
+data$BEGTIME <- WU.as.hms(data$`Beginning Time`)
+data$BEGTIME <- data$BEGDATE + data$BEGTIME
+data$BEGTIME12 <- data$BEGTIME24 <- ""
+data$BEGTIME12[!data$`Beginning Time` == 0] <- as.character(format(data$BEGTIME[!data$`Beginning Time` == 0], "%I:%M%p"))
+data$BEGTIME12 <- gsub("^0", "", data$BEGTIME12)
+data$BEGTIME24[!data$`Beginning Time` == 0] <- as.character(format(data$BEGTIME[!data$`Beginning Time` == 0], "%R"))
+
+data$ENDTIME <- WU.as.hms(data$`Ending Time`)
+data$ENDTIME <- data$BEGDATE + data$ENDTIME
+data$ENDTIME12 <- data$ENDTIME24 <- ""
+data$ENDTIME12[!data$`Ending Time` == 0] <- as.character(format(data$ENDTIME[!data$`Ending Time` == 0], "%I:%M%p"))
+data$ENDTIME12 <- gsub("^0", "", data$ENDTIME12)
+data$ENDTIME24[!data$`Ending Time` == 0] <- as.character(format(data$ENDTIME[!data$`Ending Time` == 0], "%R"))
 
 ##Create new colummns
 data$VIEW <- ""
@@ -54,7 +68,8 @@ cols <- c(
   "Meeting Days" = "Days", 
   "Meeting Time" = "Beginning Time",
   "Instructor" = "Name",
-  "Status" = "STATUS"
+  "Status" = "STATUS",
+  "Time Test" = "BEGTIME12"
 )
 
 shinyServer(function(input, output, session) {
@@ -172,31 +187,30 @@ shinyServer(function(input, output, session) {
           ### Sidebar: Options for subsetting by date/time ----
           ## customSBCollapsePanel() is a custom function for making collapsable sidebar menus
           ## Items in customSBCollapsePanel() must be in a tagList()
-          # customSBCollapsePanel("Date and Time:",
-          #                       tagList(
-          #                         checkboxGroupInput("days",
-          #                                            label = "Days",
-          #                                            choices = list("Monday" = "M",
-          #                                                           "Tuesday" = "T",
-          #                                                           "Wednesday" = "W",
-          #                                                           "Thursday" = "Th",
-          #                                                           "Friday" = "F",
-          #                                                           "Saturday" = "S"),
-          #                                            selected = "Monday"),
-          #                         sliderInput("date_range",
-          #                                     "Times",
-          #                                     min = as.POSIXct("2016-02-01 00:00"),
-          #                                     max = as.POSIXct("2016-02-01 23:59"),
-          #                                     value = c(as.POSIXct("2016-02-01 08:00"),
-          #                                               as.POSIXct("2016-02-01 22:00")),
-          #                                     timeFormat = "%H:%M",
-          #                                     ticks = TRUE,
-          #                                     step = 300
-          #                         ),
-          #                       checkboxInput("eveningweekend", 
-          #                                     label = "Limit to evenings and weekends")),
-          #                       )
-          # ),
+          customSBCollapsePanel("Date and Time:",
+                                tagList(
+                                  sliderInput("times_sunday",
+                                              label = checkboxInput("day_sunday", label = h5("Sunday"), value = TRUE),
+                                              min = as.POSIXct("2016-02-01 00:00"),
+                                              max = as.POSIXct("2016-02-01 23:59"),
+                                              value = c(as.POSIXct("2016-02-01 08:00"),
+                                                        as.POSIXct("2016-02-01 22:00")),
+                                              timeFormat = "%H:%M",
+                                              ticks = TRUE,
+                                              step = 300
+                                              ),
+                                  sliderInput("times_monday",
+                                              label = checkboxInput("day_monday", label = h5("Monday"), value = TRUE),
+                                              min = as.POSIXct("2016-02-01 00:00"),
+                                              max = as.POSIXct("2016-02-01 23:59"),
+                                              value = c(as.POSIXct("2016-02-01 08:00"),
+                                                        as.POSIXct("2016-02-01 22:00")),
+                                              timeFormat = "%H:%M",
+                                              ticks = TRUE,
+                                              step = 300
+                                  )
+                                  )
+          ),
           
           ### Sidebar: Options for subsetting by GCP criteria ----
           ## customSBCollapsePanel() is a custom function for making collapsable sidebar menus
@@ -566,7 +580,7 @@ shinyServer(function(input, output, session) {
         ##Add the building and room number
         p(paste("Instructor:", section_data$Name)),
         p(paste("Instructor Email:", section_data$wuEMAL)),
-        p(paste("Description:", section_data$DESC)),
+        p(paste("Description:", section_data$DESC_CLEAN)),
         p(section_data$ATTS),
         p(concourse_url)
       )

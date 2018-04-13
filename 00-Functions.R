@@ -45,6 +45,21 @@ customSBCollapsePanel <- function(name, content_tag_list) {
   return(panel_tags)
 }
 
+###Use string functions to convert class times to HH:MM:SS
+WU.as.hms <- function(h) {
+  require(lubridate)
+  
+  h <- as.character(h)
+  h[h == "0"] <- "0000"
+  h[nchar(h) == 1] <- paste0(h[nchar(h) == 1], "00")
+  h[nchar(h) == 3] <- paste0("0", h[nchar(h) == 3])
+  h <- gsub("(\\d{2})(\\d{2})", "\\1:\\2", h)
+  h <- hm(h, quiet = TRUE)
+  
+  return(h)
+}
+
+
 ## For each term code, determine if the date is n days before
 ## registration opens through the start of the session to be
 ## default selection
