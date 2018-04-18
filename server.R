@@ -4,6 +4,7 @@ library(dplyr)
 library(shinythemes)
 library(shinydashboard)
 library(shinyjs)
+library(knitr)
 source("00-Functions.R")
 source("01-Configs.R")
 #source("02-DateAndTime.R")
@@ -11,37 +12,12 @@ source("01-Configs.R")
 ##Load the data
 data <- readRDS(schedule_data_path)
 
-##Date and time transformations
-data$BEGTIME <- WU.as.hms(data$`Beginning Time`)
-data$BEGTIME <- data$BEGDATE + data$BEGTIME
-data$BEGTIME12 <- data$BEGTIME24 <- ""
-data$BEGTIME12[!data$`Beginning Time` == 0] <- as.character(format(data$BEGTIME[!data$`Beginning Time` == 0], "%I:%M%p"))
-data$BEGTIME12 <- gsub("^0", "", data$BEGTIME12)
-data$BEGTIME24[!data$`Beginning Time` == 0] <- as.character(format(data$BEGTIME[!data$`Beginning Time` == 0], "%R"))
-
-data$ENDTIME <- WU.as.hms(data$`Ending Time`)
-data$ENDTIME <- data$BEGDATE + data$ENDTIME
-data$ENDTIME12 <- data$ENDTIME24 <- ""
-data$ENDTIME12[!data$`Ending Time` == 0] <- as.character(format(data$ENDTIME[!data$`Ending Time` == 0], "%I:%M%p"))
-data$ENDTIME12 <- gsub("^0", "", data$ENDTIME12)
-data$ENDTIME24[!data$`Ending Time` == 0] <- as.character(format(data$ENDTIME[!data$`Ending Time` == 0], "%R"))
-
-##Create new colummns
-data$VIEW <- ""
-data$PLANNER <- FALSE
-data$CREDITS <- data$`Section Hours`
-data$GCPSKILL <- FALSE
-data$GCPKNOWLEDGE <- FALSE
-data$GCPKEYS <- ifelse(data$SUBJECT == "KEYS", TRUE, FALSE)
-data$GCPFRSH <- ifelse(data$SUBJECT == "FRSH", TRUE, FALSE)
-data$STATUS <- as.character(data$stat)
-
 ##Set some variable from the complete available data set
-choices_year <- unique(data$YEAR[order(data$YEAR)])
-choices_campus <- unique(data$BUILDINGDESC[order(data$BUILDINGDESC)])
-choices_department <- unique(data$DEPTTXT[order(data$DEPTTXT)])
-choices_prefix <- unique(data$SUBJECT[order(data$SUBJECT)])
-choices_credithour <- unique(as.numeric(data$SECHOURS[order(data$SECHOURS)]))
+choices_year <- unique(data$yr[order(data$yr)])
+choices_campus <- unique(data$com_bldg_table.txt[order(data$com_bldg_table.txt)])
+choices_department <- unique(data$stu_dept_table.txt[order(data$stu_dept_table.txt)])
+choices_prefix <- unique(data$app.crs_prefix[order(data$app.crs_prefix)])
+choices_credithour <- unique(as.numeric(data$hrs[order(data$hrs)]))
 
 gcp_skills <- c("CRI" = "Critical Thinking",
                 "ETH" = "Ethical Reasoning",
@@ -58,24 +34,22 @@ gcp_knowledge <- c("SSHB" = "Social Systems & Human Behaviors",
 
 ##Which columns to include in the out DT
 cols <- c(
-  " " = "SELECT",
-  "Details" = "VIEW", 
-  "Title" = "COTITLE",
-  "Course" = "COURSECODE",
-  "Section" = "SECNO", 
-  "Credit Hours" = "CREDITS",
-  "Location" = "BUILDINGDESC",
-  "Meeting Days" = "Days", 
-  "Meeting Time" = "Beginning Time",
-  "Instructor" = "Name",
-  "Status" = "STATUS",
-  "Time Test" = "BEGTIME12"
-)
+  " " = "app.select",
+  "Details" = "app.view", 
+  "Title" = "calc.title",
+  "Course" = "crs_no",
+  "Section" = "sec_no", 
+  "Credit Hours" = "hrs",
+  "Location" = "stu_dept_table.txt",
+  "Meeting Days" = "app.days", 
+  "Meeting Time" = "app.beg_tm.12",
+  "Instructor" = "com_id_rec.lastname",
+  "Status" = "app.status")
 
 shinyServer(function(input, output, session) {
   
   ## Create reactive values object for data -----
-  vals <- reactiveValues("Data" = data)
+  vals <- reactiveValues("schedule_data" = data)
   
   ## Main Body UI: Contains the reactively generated output of the entire page UI -----
   output$mainbody <- renderUI({
@@ -117,7 +91,7 @@ shinyServer(function(input, output, session) {
                              choices = choices_year,
                              inline = TRUE
           ),
-          selectInput("term", "Semster/Term",
+          selectInput("term", "Semester/Term",
                       choices = c("Spring Semester" = "SP",
                                   "Spring Term 1" = "S1",
                                   "Spring Term 2" = "S2",
@@ -143,11 +117,65 @@ shinyServer(function(input, output, session) {
           ## Sidebar: Optional subsetting details
           h2("Additional options: "), br(), br(),
           
+          ### Sidebar: Options for subsetting by date/time ----
+          ## customSBCollapsePanel() is a custom function for making collapsable sidebar menus
+          ## Items in customSBCollapsePanel() must be in a tagList()
+          customSBCollapsePanel("Date and Time:",
+                                tagList(
+                                  helpText("You my limit your results by day of week or time of day.
+                                           Course with no specified meeting day, such as online classes, 
+                                           are not filtered."),
+                                  radioButtons("days_mode",
+                                              "Date Filter Type",
+                                              choices = c(
+                                                "Courses with any meetings on these days." = "any",
+                                                "Courses that only meet in these days." = "only")
+                                                ),
+                                  checkboxGroupInput("days_selection",
+                                                     "Days", 
+                                                     choices = c("Sunday" = "U",
+                                                                 "Monday" = "M",
+                                                                 "Tuesday" = "T",
+                                                                 "Wednesday" = "W",
+                                                                 "Thursday" = "R",
+                                                                 "Friday" = "F",
+                                                                 "Saturday" = "S"), 
+                                                     inline = TRUE,
+                                                     selected = c("Sunday" = "U",
+                                                                  "Monday" = "M",
+                                                                  "Tuesday" = "T",
+                                                                  "Wednesday" = "W",
+                                                                  "Thursday" = "R",
+                                                                  "Friday" = "F",
+                                                                  "Saturday" = "S")
+                                                     ),
+                                  sliderInput("times_selection",
+                                              label = "Times",
+                                              min = as.POSIXct("2018-04-02 00:00", tz = "UTC"),
+                                              max = as.POSIXct("2018-04-02 23:59", tz = "UTC"),
+                                              value = c(as.POSIXct("2018-04-02 08:00", tz = "UTC"),
+                                                        as.POSIXct("2018-04-02 22:00", tz = "UTC")),
+                                              timeFormat = "%H:%M",
+                                              timezone = "+0000",
+                                              ticks = TRUE,
+                                              step = 300
+                                              )
+                                )
+          ),
+          
           ### Sidebar: Options for subsetting by program/dept/subject ----
           ## customSBCollapsePanel() is a custom function for making collapsable sidebar menus
           ## Items in customSBCollapsePanel() must be in a tagList()
-          customSBCollapsePanel("Course Type:", 
+          customSBCollapsePanel("Course Details:", 
                                 tagList(
+                                  checkboxGroupInput(
+                                    "program_level",
+                                    label = "Program Level",
+                                    choices = c("Undergraduate" = "UNDG",
+                                                "Graduate" = "GRAD"),
+                                    selected = c("UNDG", "GRAD"),
+                                    inline = TRUE
+                                  ),
                                   selectInput(inputId = "department",
                                               label = "Department",
                                               choices = choices_department,
@@ -164,14 +192,6 @@ shinyServer(function(input, output, session) {
                                             label = "Course Code",
                                             placeholder = "ABCD 1234"
                                   ),
-                                  checkboxGroupInput(
-                                    "program_level",
-                                    label = "Program Level",
-                                    choices = c("Undergraduate" = "UNDG",
-                                                "Graduate" = "GRAD"),
-                                    selected = c("UNDG", "GRAD"),
-                                    inline = TRUE
-                                  ),
                                   sliderInput(
                                     "credit_hour",
                                     label = "# of Credit Hours",
@@ -182,34 +202,6 @@ shinyServer(function(input, output, session) {
                                               )
                                   )
                                 )
-          ),
-          
-          ### Sidebar: Options for subsetting by date/time ----
-          ## customSBCollapsePanel() is a custom function for making collapsable sidebar menus
-          ## Items in customSBCollapsePanel() must be in a tagList()
-          customSBCollapsePanel("Date and Time:",
-                                tagList(
-                                  sliderInput("times_sunday",
-                                              label = checkboxInput("day_sunday", label = h5("Sunday"), value = TRUE),
-                                              min = as.POSIXct("2016-02-01 00:00"),
-                                              max = as.POSIXct("2016-02-01 23:59"),
-                                              value = c(as.POSIXct("2016-02-01 08:00"),
-                                                        as.POSIXct("2016-02-01 22:00")),
-                                              timeFormat = "%H:%M",
-                                              ticks = TRUE,
-                                              step = 300
-                                              ),
-                                  sliderInput("times_monday",
-                                              label = checkboxInput("day_monday", label = h5("Monday"), value = TRUE),
-                                              min = as.POSIXct("2016-02-01 00:00"),
-                                              max = as.POSIXct("2016-02-01 23:59"),
-                                              value = c(as.POSIXct("2016-02-01 08:00"),
-                                                        as.POSIXct("2016-02-01 22:00")),
-                                              timeFormat = "%H:%M",
-                                              ticks = TRUE,
-                                              step = 300
-                                  )
-                                  )
           ),
           
           ### Sidebar: Options for subsetting by GCP criteria ----
@@ -298,7 +290,7 @@ shinyServer(function(input, output, session) {
               )
             )
           )
-          
+          ## END ADMIN PANEL
         )
       )
     )
@@ -308,29 +300,12 @@ shinyServer(function(input, output, session) {
   output$maintable <- DT::renderDataTable({
     
     ## Create a copy of the reactive data
-    DT <- vals$Data
-    
-    ## Create html for checkboxes into the data data frames, each with a custom id by row number
-    DT[["SELECT"]] <- paste0('<input type="checkbox" name="row_selected" value="Row', 1:nrow(vals$Data),'">')
-    
-    ## Create symbols for course status (cancelled, full, etc.)
-    DT$STATUS[DT$stat == "O"] <- paste0(label = "Open ", icon("unlock"))
-    DT$STATUS[DT$stat == "R"] <- paste0(label = "Open ", icon("unlock"))
-    DT$STATUS[DT$stat == "C"] <- paste0(label = "Closed ", icon("lock"))
-    DT$STATUS[DT$stat == "I"] <- paste0(label = "Cancelled ", icon("remove"))
-    DT$STATUS[DT$stat == "X"] <- paste0(label = "Cancelled ", icon("remove"))  
-    
-    ###Create html/js for custom action buttons in the data frame
-    ## Button has two actions, one for supplying the input value of the row id (view_details),
-    ## and one for observing to trigger the event.  This allows the same button to be clicked 
-    ## twice in a row
-    DT[["VIEW"]] <- paste0('<div class = "btn-group" role = "group" aria-label="Basic example">
-                            <button type = "button" class = "btn btn-default action-button" 
-                              onclick = "Shiny.onInputChange(&quot;view_details&quot;,  this.id);
-                              Shiny.onInputChange(&quot;last_click&quot;,  Math.random())" 
-                              id = button_', 1:nrow(vals$Data),'>View</button>')
+    DT <- vals$schedule_data
     
     ## Subsetting: Required initial subset ------
+    
+    ## Hide anything that shouldn't bee seen from 
+    DT <- DT[DT$app.index.show == TRUE, ]
     
     ##Set a vector to hold the selected campuses
     selected_campuses <- input$campus
@@ -340,8 +315,8 @@ shinyServer(function(input, output, session) {
     ## TODO: You can select "nearby" online classes b/c of the WEBG code.  Should be nothing "nearby"
     ## an online class.
     if(input$nearby == TRUE) {
-      combine_codes <- unique(DT$COMBINELOC[DT$BUILDINGDESC %in% selected_campuses])
-      selected_campuses <- unique(DT$BUILDINGDESC[DT$COMBINELOC %in% combine_codes])
+      combine_codes <- unique(DT$com_bldg_table.combine_camp_code[DT$com_bldg_table.txt %in% selected_campuses])
+      selected_campuses <- unique(DT$com_bldg_table.txt[DT$com_bldg_table.combine_camp_code %in% combine_codes])
       if("Online" %in% selected_campuses) {
         selected_campuses <- selected_campuses[!selected_campuses %in% "Online"]
       }
@@ -349,122 +324,165 @@ shinyServer(function(input, output, session) {
     
     ## Subsets the initial data frame to include the year, term, and campuses
     ## All Remote WebNet+ and Online classes in included via the OR statment
-    DT <- DT[DT$YEAR %in% input$year &
-               DT$TERM %in% input$term &
-               (DT$BUILDINGDESC %in% selected_campuses |
-               DT$ONLINE == TRUE |
-               DT$WEBNET_REMOTE == TRUE), ]
+    DT <- DT[DT$yr %in% input$year &
+               DT$faid_altacad_cal.term %in% input$term &
+               (DT$com_bldg_table.txt %in% selected_campuses |
+               DT$index.online == TRUE |
+               DT$index.webnet_remote == TRUE), ]
     
     ### Include online classes
     ## Online and WebNet+ classes removed unless one of their "includes" is selected
     if (input$online == FALSE & input$webnetremote == FALSE) {
-        DT <- DT[DT$BUILDINGDESC %in% selected_campuses, ]
+        DT <- DT[DT$com_bldg_table.txt %in% selected_campuses, ]
     }
     
     ##Remove WebNet+ courses if not selected
     if (input$online == TRUE & input$webnetremote == FALSE) {
-      DT <- DT[DT$BUILDINGDESC %in% selected_campuses | DT$ONLINE == TRUE, ]
+      DT <- DT[DT$com_bldg_table.txt %in% selected_campuses | DT$index.online == TRUE, ]
     }
     
     ##Remove Online courses if not selected
     if (input$online == FALSE & input$webnetremote == TRUE) {
-      DT <- DT[DT$BUILDINGDESC %in% selected_campuses | DT$WEBNET_REMOTE == TRUE, ]
+      DT <- DT[DT$com_bldg_table.txt %in% selected_campuses | DT$index.webnet_remote == TRUE, ]
     }
     
-    ### Subsetting Splits for optional includes -----
+    ## Subsetting: Date/time -----
+    
+    if (input$days_mode == "any") {
+      DT <- DT[grepl(paste(input$days_selection, collapse = "|"), DT$app.days) | 
+                 DT$index.online == TRUE |
+                 DT$index.webnet_remote == TRUE, ]
+    }
+    
+    if (input$days_mode == "only") {
+      
+      if (!"U" %in% input$days_selection) {
+        DT <- DT[!(DT$index.sunday & DT$index.online == FALSE), ]
+      }
+
+      if (!"M" %in% input$days_selection) {
+        DT <- DT[!(DT$index.monday & DT$index.online == FALSE), ]
+      }
+
+      if (!"T" %in% input$days_selection) {
+        DT <- DT[!(DT$index.tuesday & DT$index.online == FALSE), ]
+      }
+
+      if (!"W" %in% input$days_selection) {
+        DT <- DT[!(DT$index.wednesday & DT$index.online == FALSE), ]
+      }
+
+      if (!"R" %in% input$days_selection) {
+        DT <- DT[!(DT$index.thursday & DT$index.online == FALSE), ]
+      }
+
+      if (!"F" %in% input$days_selection) {
+        DT <- DT[!(DT$index.friday & DT$index.online == FALSE), ]
+      }
+
+      if (!"S" %in% input$days_selection) {
+        DT <- DT[!(DT$index.saturday & DT$index.online == FALSE), ]
+      }
+      
+    }
+    
+    aaa <<- format(input$times_selection[1], "%H%M")
+    bbb <<- format(DT$app.beg_tm, "%H%M")             
+    
+    DT <- DT[(format(DT$app.beg_tm, "%H%M") >= format(input$times_selection[1], "%H%M") &
+               format(DT$app.beg_tm, "%H%M") <= format(input$times_selection[2], "%H%M")) |
+               DT$index.online == TRUE, ]
+    
+    ## Subsetting Splits for optional includes -----
     ## Data for options that require split/combine, isolated here and rejoined at the bottom
     
     ## Split for "Include Keystone Seminars"
     if (input$keys == TRUE) {
-      DTKEYS <- DT[DT$GCPKEYS, ]
+      DTKEYS <- DT[DT$index.keys, ]
     }
     
     ## Split for "Include Freshman Seminars"
     if (input$frsh == TRUE) {
-      DTFRSH <- DT[DT$GCPFRSH, ]
+      DTFRSH <- DT[DT$index.frsh, ]
     }
 
     ## Subsetting: program/dept/subject -----
     
     ## Subset by department
     if (!is.null(input$department)) {
-      DT <- DT[DT$DEPTTXT %in% input$department, ]
+      DT <- DT[DT$stu_dept_table.txt %in% input$department, ]
     }
     
     ## Subset by course prefix
     if (!is.null(input$subject_prefix)) {
-      DT <- DT[DT$SUBJECT %in% input$subject_prefix, ]
+      DT <- DT[DT$app.crs_prefix %in% input$subject_prefix, ]
     }
     
     ## Subset by credit hours
     if (!is.null(input$credit_hours)) {
-      DT <- DT[DT$CREDITS %in% input$credit_hours, ]
+      DT <- DT[DT$hrs %in% input$credit_hours, ]
     }
     
     ## Subset by program level
     if (!identical(input$program_level, c("UNDG", "GRAD"))) {
-      DT <- DT[DT$PROGRAM %in% input$program_level, ]
+      DT <- DT[DT$stu_course_rec.prog %in% input$program_level, ]
     }
     
     ## Subset by course number search
-    DT <- DT[grepl(pattern = input$course_number, x = DT$COURSECODE, ignore.case = TRUE), ]
+    DT <- DT[grepl(pattern = input$course_number, x = DT$crs_no, ignore.case = TRUE), ]
     
     ## Subset by credit hours
-    DT <- DT[DT$SECHOURS >= input$credit_hour[1] &
-               DT$SECHOURS <= input$credit_hour[2], ]
+    DT <- DT[DT$hrs >= input$credit_hour[1] &
+               DT$hrs <= input$credit_hour[2], ]
 
     ### Subsetting: Global Citizenship Program -----
-    ## GCP Subsetting happens by setting the GCPSKILL or GCPKNOWLEDGE column to TRUE 
-    ## based on selected items
     
-    ##Set GCPSKILL then subset by it
+    ##Set app.index.gcp.skill then subset by it
     if (!is.null(input$gcpskills)) {
       if("Critical Thinking" %in% input$gcpskills) {
-        DT$GCPSKILL[DT$CRI] <- TRUE
+        DT$app.index.gcp.skill[DT$index.gcp.crit] <- TRUE
       }
       if("Written Communication" %in% input$gcpskills) {
-        DT$GCPSKILL[DT$WCOM] <- TRUE
+        DT$app.index.gcp.skill[DT$index.gcp.wcom] <- TRUE
       }
       if("Oral Communication" %in% input$gcpskills) {
-        DT$GCPSKILL[DT$OCOM] <- TRUE
+        DT$app.index.gcp.skill[DT$index.gcp.ocom] <- TRUE
       }
       if("Ethical Reasoning" %in% input$gcpskills) {
-        DT$GCPSKILL[DT$ETH] <- TRUE
+        DT$app.index.gcp.skill[DT$index.gcp.ethc] <- TRUE
       }
       if("Intercultural Competence" %in% input$gcpskills) {
-        DT$GCPSKILL[DT$INTC] <- TRUE
+        DT$app.index.gcp.skill[DT$index.gcp.intc] <- TRUE
       }
-      DT <- DT[DT$GCPSKILL, ]
+      DT <- DT[DT$app.index.gcp.skill, ]
     }
     
-    ##Set GCPKNOWLEDGE then subset by it
+    ##Set app.index.gcp.knowledge then subset by it
     if (!is.null(input$gcpknowledge)) {
       if("Social Systems & Human Behaviors" %in% input$gcpknowledge) {
-        DT$GCPKNOWLEDGE[DT$SSHB] <- TRUE
+        DT$app.index.gcp.knowledge[DT$index.gcp.sshb] <- TRUE
       }
       if("Roots of Cultures" %in% input$gcpknowledge) {
-        DT$GCPKNOWLEDGE[DT$ROC] <- TRUE
+        DT$app.index.gcp.knowledge[DT$index.gcp.roc] <- TRUE
       }
       if("Global Understaning" %in% input$gcpknowledge) {
-        DT$GCPKNOWLEDGE[DT$GLBL] <- TRUE
+        DT$app.index.gcp.knowledge[DT$index.gcp.glbl] <- TRUE
       }
       if("Physical & Natural World" %in% input$gcpknowledge) {
-        DT$GCPKNOWLEDGE[DT$PNW] <- TRUE
+        DT$app.index.gcp.knowledge[DT$index.gcp.pnw] <- TRUE
       }
       if("Arts Appreciation" %in% input$gcpknowledge) {
-        DT$GCPKNOWLEDGE[DT$ARTS] <- TRUE
+        DT$app.index.gcp.knowledge[DT$index.gcp.arts] <- TRUE
       }
       if("Quantitative Literacy" %in% input$gcpknowledge) {
-        DT$GCPKNOWLEDGE[DT$QL] <- TRUE
+        DT$app.index.gcp.knowledge[DT$index.gcp.ql] <- TRUE
       }
-      DT <- DT[DT$GCPKNOWLEDGE, ]
+      DT <- DT[DT$app.index.gcp.knowledge, ]
     }
-    
-    ### Subsetting: Date/Time -----
     
     ### Subsetting: Keyword search-----
   
-    DT <- DT[grepl(pattern = input$searchText, x = DT$DESC_CLEAN, ignore.case = TRUE), ]
+    DT <- DT[grepl(pattern = input$searchText, x = DT$catalog.description, ignore.case = TRUE), ]
     
     ### Subsetting Combines for optional includes -----
     
@@ -482,7 +500,7 @@ shinyServer(function(input, output, session) {
     DT <- DT[, cols]
     
     ## Post-Subsetting: Sort -----
-    DT <- DT %>% arrange(desc(STATUS), SECNO, COURSECODE)
+    DT <- DT %>% arrange(desc(app.status), sec_no, crs_no)
     
     ### Post-Subsetting: DT creation -----
     ## Use the DT package to turn the data fram into a a JS table 
@@ -502,32 +520,13 @@ shinyServer(function(input, output, session) {
   output$plannertable <- DT::renderDataTable({
     
     ## Create another copy of the reactive data
-    DTplan <- vals$Data
+    DTplan <- vals$schedule_data
     
-    ###Same additions as the Main Table
-    ## TODO: Move the creation of these columns into a function
-    ## Create html for checkboxes into the data data frames, each with a custom id by row number
-    DTplan[["SELECT"]] <- paste0('<input type="checkbox" name="row_selected" value="Row', 1:nrow(vals$Data),'">')
-    
-    ## Create symbols for course status (cancelled, full, etc.)
-    DTplan$STATUS[DTplan$stat == "O"] <- paste0(label = "Open ", icon("unlock"))
-    DTplan$STATUS[DTplan$stat == "R"] <- paste0(label = "Open ", icon("unlock"))
-    DTplan$STATUS[DTplan$stat == "C"] <- paste0(label = "Closed ", icon("lock"))
-    DTplan$STATUS[DTplan$stat == "I"] <- paste0(label = "Cancelled ", icon("remove"))
-    DTplan$STATUS[DTplan$stat == "X"] <- paste0(label = "Cancelled ", icon("remove"))  
-    
-    ###Create html/js for custom action buttons in the data frame
-    ## Button has two actions, one for supplying the input value of the row id (view_details),
-    ## and one for observing to trigger the event.  This allows the same button to be clicked 
-    ## twice in a row
-    DTplan[["VIEW"]] <- paste0('<div class = "btn-group" role = "group" aria-label="Basic example">
-                           <button type = "button" class = "btn btn-default action-button" 
-                           onclick = "Shiny.onInputChange(&quot;view_details&quot;,  this.id);
-                           Shiny.onInputChange(&quot;last_click&quot;,  Math.random())" 
-                           id = button_', 1:nrow(vals$Data),'>View</button>')
+    ## Hide anything that shouldn't bee seen from 
+    DTplan <- DTplan[DTplan$app.index.show == TRUE, ]
     
     ##Subset the Planner table to only the items marked as being in the planner
-    DTplan <- DTplan[DTplan$PLANNER == TRUE, ]
+    DTplan <- DTplan[DTplan$app.index.planner == TRUE, ]
     
     ##Trim to include only the colums we want in the DT
     DTplan <- DTplan[, cols]
@@ -555,34 +554,30 @@ shinyServer(function(input, output, session) {
     selected_row <- as.numeric(strsplit(input$view_details, "_")[[1]][2])
     
     ##Isolate the data for the selected row
-    section_data <- vals$Data[selected_row, ]
+    section_data <- vals$schedule_data[selected_row, ]
     
     ### View Details Modal Consruction -----
     
     ## Create a title object from fields
-    title <- paste(section_data$COTITLE, "-", 
-                   section_data$COURSECODE, 
-                   section_data$YEAR, 
-                   section_data$TERM
+    title <- paste(section_data$calc.title, "-", 
+                   section_data$crs_no, 
+                   section_data$yr, 
+                   section_data$faid_altacad_cal.term
     )
     
     ## Create a Concourse link object
-    concourseid <- paste(section_data$YEAR, section_data$TERM, 
-                         section_data$SUBJECT, section_data$COURSENO, 
-                         section_data$SECNO, sep = "_")
-    concourse_url <- paste0("https://api.apidapter.com/v0/websterfdc/concourse_linker_1?course=", concourseid)
-    concourse_url <- a("Click to View Syllabus in Concourse.", target = "_blank", href = concourse_url)
+    concourse <- a("Click to View Syllabus in Concourse.", target = "_blank", href = section_data$app.concourse.tmpl)
     
     ## Create the HTML object for the modal
     msg <- HTML(
       paste(
-        p(paste("Location:", section_data$BUILDINGDESC)),
+        p(paste("Location:", section_data$sec_loc)),
         ##Add the building and room number
-        p(paste("Instructor:", section_data$Name)),
-        p(paste("Instructor Email:", section_data$wuEMAL)),
-        p(paste("Description:", section_data$DESC_CLEAN)),
-        p(section_data$ATTS),
-        p(concourse_url)
+        p(paste("Instructor:", section_data$com_id_rec.firstname, section_data$com_id_rec.lastname)),
+        p(paste("Instructor Email:", section_data$com_id_rec.wugetemal)),
+        p(paste("Description:", section_data$catalog.description)),
+        p(section_data$catalog.atts),
+        p(concourse)
       )
     )
     
@@ -597,13 +592,13 @@ shinyServer(function(input, output, session) {
   ### Observe Event: Planner ADD button -----
   observeEvent(input$Add_to_planner,{
     row_to_add <- as.numeric(gsub("Row","",input$checked_rows))
-    vals$Data$PLANNER[row_to_add] <- TRUE
+    vals$schedule_data$app.index.planner[row_to_add] <- TRUE
   })
     
   ### Observe Event: Planner REMOVE button -----
   observeEvent(input$Remove_from_planner,{
-    row_to_add <- as.numeric(gsub("Row","",input$checked_rows))
-    vals$Data$PLANNER[row_to_add] <- FALSE
+    row_to_remove <- as.numeric(gsub("Row","",input$checked_rows))
+    vals$schedule_data$app.index.planner[row_to_remove] <- FALSE
   })
   
   ### Observe Event: Feedback Modal  -----
