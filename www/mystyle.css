@@ -65,9 +65,31 @@ th {
   float: right; 
 }
 
-.under_sidebar_center{ 
+.under_sidebar_center { 
     margin: auto;
      width: 220px;
+}
+
+.meetTable {
+    border-style: solid;
+    border-width: 1px;
+    border-color: black;
+}
+
+.meetTable th {
+    color: #000000;
+    background-color: #ffffff;
+    padding-left: 10px;
+    padding-right: 10px;
+    border: 1px solid black;
+}
+
+.meetTable td {
+    color: #000000;
+    background-color: #ffffff;
+    padding-left: 10px;
+    padding-right: 10px;
+    border: 1px solid black;
 }
 
 

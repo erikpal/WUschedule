@@ -19,6 +19,17 @@ choices_department <- unique(data$stu_dept_table.txt[order(data$stu_dept_table.t
 choices_prefix <- unique(data$app.crs_prefix[order(data$app.crs_prefix)])
 choices_credithour <- unique(as.numeric(data$hrs[order(data$hrs)]))
 
+## A table to look up campuses by code
+sec_loc.desc.table <- data %>% 
+  select(sec_loc, com_bldg_table.txt) %>% 
+  distinct() %>% 
+  filter(!com_bldg_table.txt %in% c("Online", "WebNet+"))
+
+## A table to look up department by code
+dept.desc.table <- data %>%
+  select(stu_dept_table.dept, stu_dept_table.txt) %>% 
+  distinct()
+
 gcp_skills <- c("CRI" = "Critical Thinking",
                 "ETH" = "Ethical Reasoning",
                 "INTC" = "Intercultural Competence",
@@ -38,12 +49,12 @@ cols <- c(
   "Details" = "app.view", 
   "Title" = "calc.title",
   "Course" = "crs_no",
-  "Section" = "sec_no", 
-  "Credit Hours" = "hrs",
-  "Location" = "stu_dept_table.txt",
-  "Meeting Days" = "app.days", 
-  "Meeting Time" = "app.beg_tm.12",
-  "Instructor" = "com_id_rec.lastname",
+  "Sec." = "sec_no", 
+  "Credit Hrs" = "hrs",
+  #"Location" = "com_bldg_table.txt",
+  "Days" = "app.days", 
+  "Time" = "app.display.beg_tm",
+  #"Instructor" = "com_id_rec.lastname",
   "Status" = "app.status")
 
 shinyServer(function(input, output, session) {
@@ -150,7 +161,7 @@ shinyServer(function(input, output, session) {
                                                                   "Saturday" = "S")
                                                      ),
                                   sliderInput("times_selection",
-                                              label = "Times",
+                                              label = "Course Begin Time",
                                               min = as.POSIXct("2018-04-02 00:00", tz = "UTC"),
                                               max = as.POSIXct("2018-04-02 23:59", tz = "UTC"),
                                               value = c(as.POSIXct("2018-04-02 08:00", tz = "UTC"),
@@ -191,6 +202,10 @@ shinyServer(function(input, output, session) {
                                   textInput("course_number",
                                             label = "Course Code",
                                             placeholder = "ABCD 1234"
+                                  ),
+                                  textInput("instructor",
+                                            label = "Instructor Name",
+                                            placeholder = "Jane Gorlok"
                                   ),
                                   sliderInput(
                                     "credit_hour",
@@ -272,17 +287,20 @@ shinyServer(function(input, output, session) {
           conditionalPanel(
             condition = "input.admin_panel == true",
             fixedPanel(
-              bottom = "15px",
+              top = "15px",
               right = "15px",
-              width = "200px", 
+              width = "400px", 
               height = "150px",
               draggable = TRUE,
-              div(class = "panel panel-primary",
+              div(class = "panel panel-danger",
                   div(class = "panel-heading", "Admin Panel"),
                   div(class = "panel-body",
-                      p(Sys.Date()),
+                      p(paste("Today:", Sys.Date())),
                       p(paste("Data load:", file.info(schedule_data_path)$ctime)),
-                      p(session$clientData$url_search),
+                      p("Parameters:"),
+                      HTML(kable(t(as.data.frame(parseQueryString(session$clientData$url_search))), format = "html")),
+                      br(), 
+                      downloadButton("downloadData", "Download Current View"),
                       checkboxInput("admin_panel",
                                     label = "Hidden Admin Panel Checkbox",
                                     value = FALSE)
@@ -350,8 +368,7 @@ shinyServer(function(input, output, session) {
     
     if (input$days_mode == "any") {
       DT <- DT[grepl(paste(input$days_selection, collapse = "|"), DT$app.days) | 
-                 DT$index.online == TRUE |
-                 DT$index.webnet_remote == TRUE, ]
+                 DT$index.no_meeting_date, ]
     }
     
     if (input$days_mode == "only") {
@@ -386,12 +403,10 @@ shinyServer(function(input, output, session) {
       
     }
     
-    aaa <<- format(input$times_selection[1], "%H%M")
-    bbb <<- format(DT$app.beg_tm, "%H%M")             
-    
+    ## Time subset
     DT <- DT[(format(DT$app.beg_tm, "%H%M") >= format(input$times_selection[1], "%H%M") &
-               format(DT$app.beg_tm, "%H%M") <= format(input$times_selection[2], "%H%M")) |
-               DT$index.online == TRUE, ]
+              format(DT$app.beg_tm, "%H%M") <= format(input$times_selection[2], "%H%M")) |
+               DT$index.no_meeting_date == TRUE, ]
     
     ## Subsetting Splits for optional includes -----
     ## Data for options that require split/combine, isolated here and rejoined at the bottom
@@ -430,6 +445,10 @@ shinyServer(function(input, output, session) {
     
     ## Subset by course number search
     DT <- DT[grepl(pattern = input$course_number, x = DT$crs_no, ignore.case = TRUE), ]
+    
+    ## Subset by instructor name search
+    DT <- DT[grepl(pattern = input$instructor, x = DT$com_id_rec.fullname, ignore.case = TRUE), ]
+    
     
     ## Subset by credit hours
     DT <- DT[DT$hrs >= input$credit_hour[1] &
@@ -496,6 +515,9 @@ shinyServer(function(input, output, session) {
       DT <- unique(rbind(DT, DTFRSH))##Does this result in duplicate KEYS?
     }
     
+    ## Create a copy of the full data for downloading
+    DTdownload <<- DT
+    
     ## Post-Subsetting: Clean up before DT creation -----
     DT <- DT[, cols]
     
@@ -547,6 +569,15 @@ shinyServer(function(input, output, session) {
     )
   })
   
+  ## Data download option file creation -----
+  
+  output$downloadData <- downloadHandler(
+    filename = "schedule.csv",
+    content = function(file) {
+      write.csv(DTdownload, file)
+    }
+  )
+  
   ### Observe Event: View Details Modal -----
   observeEvent(input$last_click, {
     
@@ -560,26 +591,93 @@ shinyServer(function(input, output, session) {
     
     ## Create a title object from fields
     title <- paste(section_data$calc.title, "-", 
-                   section_data$crs_no, 
+                   section_data$crs_no,
+                   section_data$sec_no, 
                    section_data$yr, 
                    section_data$faid_altacad_cal.term
     )
     
     ## Create a Concourse link object
-    concourse <- a("Click to View Syllabus in Concourse.", target = "_blank", href = section_data$app.concourse.tmpl)
+    if((section_data$beg_date - 42) <= Sys.Date()){
+      concourse <- a("Preview syllabus in Concourse.", target = "_blank", href = section_data$app.concourse.url)
+    } else {
+      concourse <- a("Preview syllabus template in Concourse.", target = "_blank", href = section_data$app.concourse.tmpl)
+    }
+    
+    ## Create a professor mailto link
+    mailto <- a(section_data$com_id_rec.wugetemal, href = paste0("mailto:", section_data$com_id_rec.wugetemal))
+    
+    ## Create the meetingtimes table
+    ## TODO: Conditional logic for multiple meeting times and NO meeting times
+    
+    if(!section_data$index.multi_meetings & !section_data$index.no_meeting_date) {
+      meeting <- HTML(
+        kable(
+          data.frame(
+            "Starting" = section_data$stu_meeting_rec.beg_date,
+            "Thru" = section_data$stu_meeting_rec.end_date,
+            "Days" = section_data$stu_meeting_rec.days, 
+            "Start Time" = section_data$app.beg_tm.12,
+            "End Time" = section_data$app.end_tm.12
+          ),
+          format = "html", table.attr = 'class="meetTable"'
+        )
+      )
+    } else if(section_data$index.multi_meetings) {
+      meeting <- HTML(section_data$app.multi_meeting)
+    } else if(section_data$index.no_meeting_date) {
+      meeting <- "Online or no meeting date specified."
+    }
+    
+    if(!section_data$catalog.atts == "") {
+      atts <- p(strong("Other Details:"),
+                section_data$catalog.atts
+                )
+    } else {
+      atts <- ""
+    }
+    
+
     
     ## Create the HTML object for the modal
-    msg <- HTML(
-      paste(
-        p(paste("Location:", section_data$sec_loc)),
-        ##Add the building and room number
-        p(paste("Instructor:", section_data$com_id_rec.firstname, section_data$com_id_rec.lastname)),
-        p(paste("Instructor Email:", section_data$com_id_rec.wugetemal)),
-        p(paste("Description:", section_data$catalog.description)),
-        p(section_data$catalog.atts),
-        p(concourse)
+    msg <- tagList(
+      p(
+        strong("Title:"),
+        section_data$calc.title
+        ),
+      p(strong("Number:"),
+        section_data$crs_no,
+        section_data$sec_no
+        ),
+      p(strong("Instructor:"),
+        section_data$com_id_rec.firstname,
+        section_data$com_id_rec.lastname
+        ),
+      p(strong("Instructor Email:"),
+        mailto
+        ),
+      p(strong("Meeting Times:"),
+        meeting
+        ),
+      p(strong("Location:"),
+        section_data$com_bldg_table.txt
+        ##TODO: Add meeting building and room, deal with online classes
+        ),
+      # p(strong("Course Fee:"),
+      #   "COMING SOON"
+      #   ),
+      p(strong("Description:"),
+        section_data$catalog.description
+        ),
+      atts,
+      p(strong("Syllabus:"),
+          concourse,
+          h6(strong("Note:"), 
+            "Limited syllabi previews available 6-weeks prior to course begin, otherwise
+            link is to a general syllabus template.",
+            em("Syllabi are subject to change at any time."))
+        )
       )
-    )
     
     ## Display the modal
     showModal(modalDialog(
@@ -616,7 +714,8 @@ shinyServer(function(input, output, session) {
   
   observe({
     query <- parseQueryString(session$clientData$url_search)
-    
+    query <- lapply(query, function(x) unlist(strsplit(x, ",")))
+
     ## Select year
     if (!is.null(query$year)) {
       updateCheckboxGroupInput(session, "year", selected = query$year)
@@ -629,7 +728,11 @@ shinyServer(function(input, output, session) {
     
     ## Select campus
     if (!is.null(query$campus)) {
-      updateSelectInput(session, "campus", selected = query$campus)
+      selected_campuses <- sec_loc.desc.table %>% 
+        filter(sec_loc %in% query$campus) %>% 
+        .[["com_bldg_table.txt"]]
+      
+      updateSelectInput(session, "campus", selected = selected_campuses)
     }
     
     ## Select nearby campuses
@@ -647,41 +750,71 @@ shinyServer(function(input, output, session) {
       updateCheckboxInput(session, "webnetremote", value = as.logical(query$webnetremote))
     }
     
-    ## Select department
-    if (!is.null(query$department)) {
-      updateSelectInput(session, "department", selected = query$department)
+    ## Select Date Filter Type
+    if (!is.null(query$days_mode)) {
+      updateCheckboxInput(session, "days_mode", value = query$days_mode)
     }
     
-    ## Select subject
-    if (!is.null(query$subject_prefix)) {
-      updateSelectInput(session, "subject_prefix", selected = query$subject_prefix)
+    ## Select Days
+    if (!is.null(query$days)) {
+      updateCheckboxInput(session, "days_selection", value = query$days)
     }
     
-    ## Enter course code
-    if (!is.null (query$course_number)) {
-      updateTextInput(session, "course_number", value = query$course_number)
+    ## Select Times
+    if (!is.null(query$times)) {
+      time_start <- paste0("2018-04-02", gsub("(\\d{2})(\\d{2})", "\\1:\\2", query$times[1]))
+      time_end <- paste0("2018-04-02", gsub("(\\d{2})(\\d{2})", "\\1:\\2", query$times[2]))
+      updateSliderInput(session, "times_selection", 
+                        value = c(as.POSIXct(time_start, tz = "UTC"),
+                                  as.POSIXct(time_end, tz = "UTC")))
     }
     
     ## Select program level
-    if (!is.null(query$program_level)) {
-      updateCheckboxGroupInput(session, "program_level", selected = query$program_level)
+    if (!is.null(query$program)) {
+      updateCheckboxGroupInput(session, "program_level", selected = query$program)
+    }
+    
+    ## Select department
+    if (!is.null(query$department)) {
+      selected_departments <- dept.desc.table %>% 
+        filter(stu_dept_table.dept %in% query$department) %>% 
+        .[["stu_dept_table.txt"]]
+      
+      updateSelectInput(session, "department", selected = selected_departments)
+    }
+    
+    ## Select subject
+    if (!is.null(query$subject)) {
+      updateSelectInput(session, "subject_prefix", selected = query$subject)
+    }
+    
+    ## Enter course code
+    if (!is.null (query$course)) {
+      updateTextInput(session, "course_number", value = query$course)
+    }
+    
+    ## Enter instructor search
+    if (!is.null(query$instructor)) {
+      updateTextInput(session, "instructor", value = query$instructor)
     }
     
     ## Select credit hour range
-    if (!is.null(query$credit_hour)) {
+    if (!is.null(query$credit)) {
       updateSliderInput(session, "credit_hour", 
-                        value = query$credit_hour,  
+                        value = query$credit,  
                         step = 1) 
     }
     
     ## Select skill areas
     if (!is.null(query$gcpskills)) {
-      updateSelectInput(session, "gcpskills", selected = query$gcpskills)
+      selected_gcpskills <- gcp_skills[names(gcp_skills) %in% query$gcpskills]
+      updateSelectInput(session, "gcpskills", selected = selected_gcpskills)
     }
     
     ## Select knowledge areas
     if (!is.null(query$gcpknowledge)) {
-      updateSelectInput(session, "gcpknowledge", selected = query$gcpknowledge)
+      selected_gcpknowledge <- gcp_knowledge[names(gcp_knowledge) %in% query$gcpknowledge]
+      updateSelectInput(session, "gcpknowledge", selected = selected_gcpknowledge)
     }
     
     ## Select Keystone courses
@@ -696,7 +829,7 @@ shinyServer(function(input, output, session) {
     
     ## Enter keyword search
     if (!is.null(query$searchText)) {
-      updateCheckboxGroupInput(session, "searchText", selected = query$searchText)
+      updateTextInput(session, "searchText", value = query$searchText)
     }
     
     ## Open Hidden Admin Panel
